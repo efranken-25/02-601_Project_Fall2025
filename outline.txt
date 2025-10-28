@@ -1,0 +1,47 @@
+outline of what is needed to be done for project.
+
+1. obtain data (done)
+
+2. filter low-expression genes 
+    -remove genes with low expression across all samples
+
+3. can perform "batch correction" if neccessary
+    -if data comes from different experiments/batches, methods like limma package in R to remove bath effects
+    and prevent from influencing network
+
+4. construct 2 separate co-expression networks. For each cancer type, calculate gene-pair correlation matrix.
+   a. calculate pairwise correlation (either pearson or spearman) between every pair of genes across samples for each type
+        -will need gonum/stat package for this
+   b. create weighted adjacency matrix 
+        - convert correlation matrix into weighted adjacency matrix, where weight represents strength of co-expression
+    relationship. WCGNA R package tool used for this. 
+   c. generate topological overlap matrix (TOM) 
+        - measured the degree of overlap in shared neighbors between 2 genes, giving 
+   more robust measure of network "interconnectedness"
+   d. indentify modules
+        -use hierarchial clustering from TOM to identify clusters. genes within same cluster are highly co-expressed with each other
+        and each cluster is given a distinc color for visualization (i am assuming this is the case for R, not sure if it is the same for Go)
+   e. summarize cluster expression 
+        -for each cluster, calculate "eigengene or eigenvalue" (first pricipal component) of the expression of all genes in the cluster
+        This single value can serve as a representative expression profile for entire cluster. 
+
+
+5. Compare networks and clusters
+    a. maybe relate clusters to clinical trials
+        -for each cancer type, test for a significant correlation between cluster eigenvalue and clinical trait (tumor stage)
+    b. Assess module preservation - use metrics to assess whether clusters from one cancer networks are preserved in another
+        -with WGCNA package in R, modulePreservation function allows to calculate statistics that quantify preservation
+        -PyWGCNA uses Jaccard similarity coefficient and Fisher exact test to assess significance of overlap between modules in different networks
+    c. identify differentially co-expressed genes and clusters
+        a. compare cluster memberships - genes that are the most highly connected in one cancer type but not another are candidates for driving disease
+        specific differences
+        b. could use DCE analysis 
+
+6. visualize and interpret graphs (using RShiny) 
+    a. create and visualize co-expression networks. Can plot genes (nodes) and color them based on cluster assignment
+    b. create comparitive graphs   
+        -highlight conserved and unique clusters
+        -show differential edges (edges in one cancer network but not another)
+        -comparitive heatmap (for fun)
+
+    
