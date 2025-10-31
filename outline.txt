@@ -3,11 +3,11 @@ outline of what is needed to be done for project.
 1. obtain data (done)
 
 2. filter low-expression genes 
-    -remove genes with low expression across all samples
+    -remove genes with low expression across all samples (get rid of tpm < 10)
 
 3. can perform "batch correction" if neccessary
     -if data comes from different experiments/batches, methods like limma package in R to remove bath effects
-    and prevent from influencing network
+    and prevent from influencing network (probably not necessary actually)
 
 4. construct 2 separate co-expression networks. For each cancer type, calculate gene-pair correlation matrix.
    a. calculate pairwise correlation (either pearson or spearman) between every pair of genes across samples for each type
