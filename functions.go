@@ -17,5 +17,3 @@ import (
 
 //FilterLowExpression takes matrix, row, col in as input. if tpm levels are < 10, it will remove these genes. Returns new matrix without low expression data.
 
-
-//This is a test
