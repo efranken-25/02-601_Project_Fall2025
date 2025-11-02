@@ -15,14 +15,12 @@ outline of what is needed to be done for project.
    b. create weighted adjacency matrix 
         - convert correlation matrix into weighted adjacency matrix, where weight represents strength of co-expression
     relationship. WCGNA R package tool used for this. 
-   c. generate topological overlap matrix (TOM) 
-        - measured the degree of overlap in shared neighbors between 2 genes, giving 
-   more robust measure of network "interconnectedness"
-   d. indentify modules
-        -use hierarchial clustering from TOM to identify clusters. genes within same cluster are highly co-expressed with each other
+
+   d. indentify clusters
+        -use hierarchial clustering from weighted adjacency to identify clusters. genes within same cluster are highly co-expressed with each other
         and each cluster is given a distinc color for visualization (i am assuming this is the case for R, not sure if it is the same for Go)
    e. summarize cluster expression 
-        -for each cluster, calculate "eigengene or eigenvalue" (first pricipal component) of the expression of all genes in the cluster
+        -for each cluster, calculate "eigengene or eigenvalue" of the expression of all genes in the cluster
         This single value can serve as a representative expression profile for entire cluster. 
 
 
