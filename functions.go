@@ -11,16 +11,10 @@ import (
 
 // Another way to explain is covariance of 2 genes expression vectors divided by product of their standard deviations
 // CalculatePearsonCoefficient takes a slice of floats for 2 genes x and y and returns the a float64 corresponding to its pearson correlation coefficient
-func CalculatePearsonCoefficient(X, Y []float64) float64 {
+func CalculatePearson(X, Y []float64) float64 {
+	if len(X) != len(Y) {
+		panic("slices must have the same length")
+	}
 
-	//Calculate the covariance
-	covariance := stat.Covariance(X, Y, nil)
-
-	//calculate the standard deviation
-	stdDevX := stat.StdDev(X, nil)
-	stdDevY := stat.StdDev(Y, nil)
-
-	pearsonCoefficient := covariance / stdDevX * stdDevY
-
-	return pearsonCoefficient
+	return stat.Correlation(X, Y, nil) // nil = no weights
 }
