@@ -4,15 +4,20 @@
 
 package main
 
-type ExpressionMatrix map[string]float64 //upgma was [][]float64
+type ExpressionMap map[string]float64 //upgma was [][]float64
+
+type ExpressionMatrix [][]float64
 
 // using Network instead of tree
 // Network is slice of pointers to nodes
 type Network []*Node
 
+type Edge struct {
+	Nodes *Node   //node this edge connects to
+	Corr  float64 //weight for weighted matrix
+}
+
 type Node struct {
-	ExpressionVal *float64  //strength of co-expression
-	Weights       []float64 //need weight for weighted matrix
-	GeneName      string
-	Children      []*Node //need to figure out a way to not have finite num of children (i think its Children []*Node)
+	GeneName string
+	Edges    []*Edge //all edges from this node and to others
 }
