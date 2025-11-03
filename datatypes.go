@@ -4,7 +4,7 @@
 
 package main
 
-type ExpressionMap map[string]float64 //upgma was [][]float64
+type ExpressionMap map[string]map[string]float64 //upgma was [][]float64
 
 type ExpressionMatrix [][]float64
 
