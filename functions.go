@@ -17,3 +17,14 @@ import (
 
 //FilterLowExpression takes matrix, row, col in as input. if tpm levels are < 10, it will remove these genes. Returns new matrix without low expression data.
 
+
+//CreateCoexpressionNetwork is the highest level function 
+//It 
+
+//CreateAdjacencyMatrix takes as input
+
+//It creates a map, where nodes are they keys and values are the edge
+
+//HierarchicalClustering
+
+//AssignEdges
