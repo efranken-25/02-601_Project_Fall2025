@@ -9,7 +9,7 @@ func main() {
 
 	//Begin Analyzing Breast Cancer RNA seq gene count Data
 	// Create a map of maps. Nested map mapping gene_name (string) to sampleID(string) to tpm value
-	geneExpressionBreastMap, err1 := ReadGeneExpressionDirToGeneMap("/Users/bethany/go/src/ProgrammingProject/GeneExpressionData/BreastData")
+	geneExpressionBreastMap, err1 := ReadGeneExpressionDirToGeneMap("/Users/bethany/ProgrammingProject/GeneExpressionData/BreastData")
 
 	// log any errors that may arise from the parsing/ reading in the breast data files
 	if err1 != nil {
@@ -20,7 +20,7 @@ func main() {
 
 	//Begin Analyzing Ovarian Cancer RNA seq gene count Data
 	//Create a map of maps. Nested map mapping gene_name (string) to sampleID(string) to tpm value
-	geneExpressionOvarianMap, err2 := ReadGeneExpressionDirToGeneMap("/Users/bethany/go/src/ProgrammingProject/GeneExpressionData/OvarianData")
+	geneExpressionOvarianMap, err2 := ReadGeneExpressionDirToGeneMap("/Users/bethany/ProgrammingProject/GeneExpressionData/OvarianData")
 
 	// log any errors that may arise from the parsing/ reading in the ovarian data files
 	if err2 != nil {
@@ -43,16 +43,51 @@ func main() {
 		break
 	}
 
+	fmt.Println("Gathering sample names for breast cancer data.")
 	// Store the sample names for the Breast Cancer Data
-	sampleNames := GetSampleNames(geneExpressionBreastMap)
+	breastSampleNames := GetSampleNames(geneExpressionBreastMap)
 
+	//Sort the breast sample names
+	sortSampleNames(breastSampleNames)
+
+	//Print the breast sample names to ensure they are sorted by numerical order
+	fmt.Println(breastSampleNames)
+
+	fmt.Println("Gathering sample names for ovarian cancer data.")
+	// Store the sample names for the Ovarian Cancer Data
+	ovarianSampleNames := GetSampleNames(geneExpressionOvarianMap)
+
+	//Sort the ovarian sample names
+	sortSampleNames(ovarianSampleNames)
+
+	//Print the ovarian sample names to ensure they are sorted by numerical order
+	fmt.Println(ovarianSampleNames)
+
+	fmt.Println("Cleaning Data...Filtering out low expression genes...")
 	// Use Mean-Based Filtering in order to normalize data while maintaining fixed number of samples across each gene
-	filteredGeneExpressionBreastMap := MeanBasedFilter(geneExpressionBreastMap, sampleNames, 10.0)
+	filteredGeneExpressionBreastMap := MeanBasedFilter(geneExpressionBreastMap, breastSampleNames, 10.0)
 
-	filteredGeneExpressionOvarianMap := MeanBasedFilter(geneExpressionOvarianMap, sampleNames, 10.0)
+	filteredGeneExpressionOvarianMap := MeanBasedFilter(geneExpressionOvarianMap, ovarianSampleNames, 10.0)
 
-	/*stat.Correlation(x, y, weights []float64) float64
-	Computes the Pearson correlation coefficient between two data slices, x and y.
-	*/
+	fmt.Println("Gathering gene names for breast cancer data.")
+	// Store the gene names for the Breast Cancer Data
+	breastGeneNames := GetGeneNames(filteredGeneExpressionBreastMap)
 
+	//Print the breast gene names to check the names and ensure they are sorted
+	fmt.Println(breastGeneNames)
+
+	fmt.Println("Gathering gene names for ovarian cancer data.")
+	// Store the gene names for the Breast Cancer Data
+	ovarianGeneNames := GetGeneNames(filteredGeneExpressionOvarianMap)
+
+	//Print the breast gene names to check the names and ensure they are sorted
+	fmt.Println(ovarianGeneNames)
+
+	//Compute the Pearson Correlation
+	fmt.Println("Computing Pearson Correlation between genes across all breast cancer samples.")
+
+	PearsonCorrelationMatrix := ComputePearsonCorrelation(breastGeneNames, breastSampleNames, filteredGeneExpressionBreastMap)
+
+	//temporary Checking the Pearson Correlation Matrix
+	fmt.Println(PearsonCorrelationMatrix)
 }

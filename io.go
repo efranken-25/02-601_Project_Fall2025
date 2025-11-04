@@ -1,3 +1,23 @@
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+)
+
+/*
+
+Step 2: filter low-expression genes
+
+1. Read in the data from a file. Parse the file
+2. Only keep data columns and map string to float64: gene_name, tpm_unstranded
+3. Filter gene_type and keep only those labeled as "protein coding" in column gene_type
+//make map of maps preserving sample column inner key as BRCA#
+*/
 
 // ParseGeneExpressionFile reads a tab-separated gene expression file and returns
 // a map from gene_name -> tpm_unstranded for rows where gene_type == "protein_coding"
