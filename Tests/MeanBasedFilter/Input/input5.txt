@@ -1,0 +1,12 @@
+BEGIN
+geneName: GENE1
+sample1: 50
+sample2: 2
+sample3: 3
+geneName: GENE2
+sample1: 5
+sample2: 5
+sample3: 5
+samples: sample1,sample2,sample3
+meanThresh: 10
+END

@@ -1,0 +1,8 @@
+BEGIN
+geneName: OVERLAP
+breast1_s1: 12.0
+breast1_s2: 15.0
+breast2_s2: 20.0
+breast2_s3: 25.0
+result:
+END

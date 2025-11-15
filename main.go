@@ -9,7 +9,7 @@ func main() {
 
 	//Begin Analyzing Breast Cancer RNA seq gene count Data
 	// Create a map of maps. Nested map mapping gene_name (string) to sampleID(string) to tpm value
-	geneExpressionBreastMap, err1 := ReadGeneExpressionDirToGeneMap("/Users/bethany/ProgrammingProject/GeneExpressionData/BreastData")
+	geneExpressionBreastMap, err1 := ReadGeneExpressionDirToGeneMap("/Project_Data/BreastData")
 
 	// log any errors that may arise from the parsing/ reading in the breast data files
 	if err1 != nil {
@@ -20,7 +20,7 @@ func main() {
 
 	//Begin Analyzing Ovarian Cancer RNA seq gene count Data
 	//Create a map of maps. Nested map mapping gene_name (string) to sampleID(string) to tpm value
-	geneExpressionOvarianMap, err2 := ReadGeneExpressionDirToGeneMap("/Users/bethany/ProgrammingProject/GeneExpressionData/OvarianData")
+	geneExpressionOvarianMap, err2 := ReadGeneExpressionDirToGeneMap("/Project_Data/OvarianData")
 
 	// log any errors that may arise from the parsing/ reading in the ovarian data files
 	if err2 != nil {

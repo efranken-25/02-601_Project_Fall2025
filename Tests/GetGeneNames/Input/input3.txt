@@ -1,0 +1,12 @@
+BEGIN
+geneName: GENE1
+sample1: 10.5
+sample2: 22.1
+geneName: TP53
+sample1: 5.5
+sample2: 6.6
+geneName: DUPLICATE
+sample1: 5
+sample2: 5
+sample3: 5
+END
