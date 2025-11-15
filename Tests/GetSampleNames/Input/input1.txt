@@ -1,0 +1,7 @@
+BEGIN
+geneName: GENE1
+sample1: 10.5
+sample2: 22.1
+sample3: 15
+result:
+END

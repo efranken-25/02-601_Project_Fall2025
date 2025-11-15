@@ -1,0 +1,7 @@
+BEGIN
+geneName: DUPLICATE
+breast1_s1: 5.0
+breast1_s2: 5.0
+breast1_s3: 5.0
+result:
+END

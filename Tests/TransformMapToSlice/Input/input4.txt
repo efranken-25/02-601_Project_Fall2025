@@ -1,0 +1,4 @@
+BEGIN
+geneName: EMPTYGENE
+result:
+END

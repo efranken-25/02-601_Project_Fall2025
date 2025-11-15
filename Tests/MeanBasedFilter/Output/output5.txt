@@ -1,0 +1,4 @@
+geneName: GENE1
+sample1: 50
+sample2: 2
+sample3: 3

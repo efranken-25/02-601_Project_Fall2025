@@ -1,0 +1,16 @@
+BEGIN
+geneName: GENE1
+sample1: 8
+sample2: 12
+sample3: 10
+geneName: TP53
+sample1: 5
+sample2: 6
+sample3: 7
+geneName: GENE3
+sample1: 15
+sample2: 20
+sample3: 25
+samples: sample1,sample2,sample3
+meanThresh: 10
+END

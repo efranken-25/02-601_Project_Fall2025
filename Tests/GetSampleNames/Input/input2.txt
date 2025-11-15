@@ -1,0 +1,6 @@
+BEGIN
+geneName: TP53
+heart1: 5.5
+heart2: 6.6
+result:
+END
