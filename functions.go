@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strconv"
 
+	"golang.org/x/exp/stats"
 	"gonum.org/v1/gonum/stat"
 )
 
@@ -178,3 +179,150 @@ func ComputePearsonCorrelation(sortedGeneNames, sortedSampleNames []string, filt
 	}
 	return CorrMatrix
 }
+
+/*
+// WriteCorrelationCSV writes the correlation matrix to a CSV file.
+// The first row/column contain gene names as headers.
+func WriteCorrelationCSV(filename string, sortedGeneNames []string, corrMatrix [][]float64) error {
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	w := csv.NewWriter(f)
+	defer w.Flush()
+
+	n := len(sortedGeneNames)
+
+	// Optional: sanity check
+	if len(corrMatrix) != n {
+		return fmt.Errorf("corrMatrix dimension (%d) does not match geneNames length (%d)", len(corrMatrix), n)
+	}
+
+	// ---- Write header row: "", gene1, gene2, ... ----
+	header := make([]string, n+1)
+	header[0] = "" // top-left corner empty
+	for i, name := range sortedGeneNames {
+		header[i+1] = name
+	}
+	if err := w.Write(header); err != nil {
+		return err
+	}
+
+	// ---- Write each row: geneName, corr values... ----
+	for i, row := range corrMatrix {
+		if len(row) != n {
+			return fmt.Errorf("row %d length (%d) does not match geneNames length (%d)", i, len(row), n)
+		}
+
+		record := make([]string, n+1)
+		record[0] = sortedGeneNames[i]
+
+		for j, v := range row {
+			if math.IsNaN(v) {
+				// choose how you want to represent missing correlations:
+				record[j+1] = "" // or "NaN"
+			} else {
+				// format with, say, 4 decimal places
+				record[j+1] = strconv.FormatFloat(v, 'f', 4, 64)
+			}
+		}
+
+		if err := w.Write(record); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}*/
+
+// calculate the quantile and choose the 95% as the cutoff corr value threshold
+// need to go thru the matrix, append all the values into a growing slice
+// sort the slice
+// call the quantile operation from the stats package to compute the 90 95 99%
+func TransformMatrixToSlice(BreastPearsonCorrelationMatrix [][]float64) []float64 {
+	quantileSlice := make([]float64, 0)
+
+	numRows := len(BreastPearsonCorrelationMatrix)
+	numCols := len(BreastPearsonCorrelationMatrix[0])
+
+	//only check upper triangle of the distance matrix for efficiency
+	//and to ignore the diagonal "1"s
+	for i := 0; i < numRows; i++ {
+		for j := i + 1; j < numCols; j++ {
+			value := BreastPearsonCorrelationMatrix[i][j]
+			quantileSlice = append(quantileSlice, value)
+		}
+	}
+	return quantileSlice
+}
+
+// Function SortCorrVals takes as input a slice of float64 values,
+// it sorts the values in increasing numerical order and it returns the
+// sorted []float64
+func SortCorrVals(quantileSlice []float64) []float64 {
+	sort.Float64s(quantileSlice)
+	return quantileSlice
+}
+
+// Function ComputeQuantile takes a sorted slice of float64 values corresponding to the
+// correlation values from the corr matrix, and it computes the 90th, 95th, and 99th quantile
+// to be analyzed for determining the correlation threshold for edge determination
+func ComputeQuantile(quantileSlice []float64) []float64 {
+
+	quantileProbability := []float64{0.90, 0.95, 0.99}
+
+	computedQuantiles := stats.Quantiles(quantileSlice, quantileProbability...)
+
+	return computedQuantiles
+} //prints: [0.5576559638595919 0.6474333018882147 0.779461567805639]
+
+// Function BuildGraph takes a correlation matrix as input along with the threshold and sorted list of gene names
+// it ranges over the values and determines
+// if there is an edge between correlated genes based on the computed threshold and builds a graph network.
+// If the absolute value of the correlation between 2 genes is >= 0.65, then there is an edge between those
+// two genes (nodes)
+func BuildGraph(BreastPearsonCorrelationMatrix [][]float64, breastGeneNames []string, threshold float64) GraphNetwork {
+
+	numGenes := len(BreastPearsonCorrelationMatrix)
+	numCols := len(BreastPearsonCorrelationMatrix[0])
+
+	//input the nodes representing each gene in the breastGraph
+	breastGraph := make(GraphNetwork, numGenes)
+	for i := 0; i < numGenes; i++ {
+		breastGraph[i] = &Node{
+			ID:       i,
+			GeneName: breastGeneNames[i],
+			Edges:    []*Edge{},
+		}
+	}
+
+	//range over the breast correlation matrix upper triangle
+	for i := 0; i < numGenes; i++ {
+		for j := i + 1; j < numCols; j++ {
+			corr := BreastPearsonCorrelationMatrix[i][j]
+			weight := math.Abs(corr)
+			//check if the absolute value of the correlation is above or equal to the threshold to determine if there is an edge between them
+			if weight >= threshold {
+				//then each gene is a node and
+				//there exists an edge between the 2 genes
+				u := breastGraph[i]
+				v := breastGraph[j]
+
+				//create the edges
+				e1 := &Edge{To: v, Weight: corr}
+				e2 := &Edge{To: u, Weight: corr}
+
+				//give the nodes those edges
+				u.Edges = append(u.Edges, e1)
+				v.Edges = append(v.Edges, e2)
+			}
+
+		}
+	}
+
+	return breastGraph
+}
+
+// Identify clustering using levain

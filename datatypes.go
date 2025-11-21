@@ -4,20 +4,17 @@
 
 package main
 
-type ExpressionMap map[string]float64 //upgma was [][]float64
+// Tree is a slice of pointers to nodes
+type GraphNetwork []*Node
 
-type ExpressionMatrix [][]float64
-
-// using Network instead of tree
-// Network is slice of pointers to nodes
-type Network []*Node
-
-type Edge struct {
-	Nodes *Node   //node this edge connects to
-	Corr  float64 //weight for weighted matrix
+// Node is an object that represents a node of a tree.
+type Node struct {
+	ID       int
+	GeneName string
+	Edges    []*Edge
 }
 
-type Node struct {
-	GeneName string
-	Edges    []*Edge //all edges from this node and to others
+type Edge struct {
+	To     *Node
+	Weight float64 // correlation
 }
