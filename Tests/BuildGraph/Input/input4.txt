@@ -1,0 +1,14 @@
+geneNames: G1, G2
+sampleNames: S1, S2, S3, S4
+G1 {
+    S1: 0.1
+    S2: 0.1
+    S3: 0.1
+    S4: 0.2
+}
+G2 {
+    S1: 1
+    S2: 2
+    S3: 3
+    S4: 4
+}
