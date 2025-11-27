@@ -4,6 +4,12 @@
 
 package main
 
+// map of strings to a map of strings of floats
+type ExpressionMap map[string]map[string]float64
+
+// 2D slice of float64
+type CorrelationMatrix [][]float64
+
 // Tree is a slice of pointers to nodes
 type GraphNetwork []*Node
 
