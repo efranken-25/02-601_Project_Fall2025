@@ -11,7 +11,7 @@ import (
 
 // Function TransformMapToSlice takes a map's outerkey (geneName) and the map its in as input
 // and returns a slice corresponding to the float64 tpm values for each of the samples for that gene
-func TransformMapToSlice(geneName string, geneExpressionBreastMap map[string]map[string]float64) []float64 {
+func TransformMapToSlice(geneName string, geneExpressionBreastMap ExpressionMap) []float64 {
 	//initialize an empty slice to for a geneName, the float64 values are the tpm values for each of the samples
 	geneNameslice := make([]float64, 0)
 
@@ -32,7 +32,7 @@ func TransformMapToSlice(geneName string, geneExpressionBreastMap map[string]map
 // Store all of the sample names from the Data
 // Function GetSampleNames takes a map[string]map[string]float64 as input and grabs the inner string key corresponding to the
 // sample names and returns it as a slice of sample names
-func GetSampleNames(geneExpressionBreastMap map[string]map[string]float64) []string {
+func GetSampleNames(geneExpressionBreastMap ExpressionMap) []string {
 
 	samples := make([]string, 0)
 
@@ -57,7 +57,7 @@ func GetSampleNames(geneExpressionBreastMap map[string]map[string]float64) []str
 // Store all of the gene names from the Data
 // Function GetGeneNames takes a map[string]map[string]float64 as input and grabs the outer string key corresponding to the
 // gene names and returns it as a sorted slice of gene names
-func GetGeneNames(geneExpressionBreastMap map[string]map[string]float64) []string {
+func GetGeneNames(geneExpressionBreastMap ExpressionMap) []string {
 
 	//initialize list to store geneNames
 	geneNames := make([]string, 0)
@@ -77,7 +77,7 @@ func GetGeneNames(geneExpressionBreastMap map[string]map[string]float64) []strin
 // Step 1: Find/confirm number of samples for each gene (21 samples)
 // Step 2: For each gene, Calculate the mean of the tpm values across its samples and then,
 // Step 3: If the mean of that gene's tpm values is <=10 then remove the gene from further analyses
-func MeanBasedFilter(geneExpressionBreastMap map[string]map[string]float64, samples []string, meanThresh float64) map[string]map[string]float64 {
+func MeanBasedFilter(geneExpressionBreastMap ExpressionMap, samples []string, meanThresh float64) ExpressionMap {
 
 	//initialize a nested map for return corresponding to the input map filtered for only genes with a mean tpm greater than 10.0
 	out := make(map[string]map[string]float64, len(geneExpressionBreastMap))
@@ -123,8 +123,7 @@ func sortSampleNames(samples []string) {
 // Function ComputePearsonCorrelation takes as input a sorted list of gene names and sample names, as well as a nested filtered map
 // of map[genenames]map[samplenames]TPMValues and it computes the Pearson Correlation between each pair of genes across samples
 // it returns a 2D matrix of pearson coeff values ([][]float64) with row and column indices corresponding to indices of genes found in sortedGeneNames list
-func ComputePearsonCorrelation(sortedGeneNames, sortedSampleNames []string, filteredGeneExpressionBreastMap map[string]map[string]float64) [][]float64 {
-
+func ComputePearsonCorrelation(sortedGeneNames, sortedSampleNames []string, filteredGeneExpressionBreastMap ExpressionMap) CorrelationMatrix {
 	//initialize a square matrix for return
 	n := len(sortedGeneNames)
 	CorrMatrix := make([][]float64, n)
@@ -183,7 +182,7 @@ func ComputePearsonCorrelation(sortedGeneNames, sortedSampleNames []string, filt
 /*
 // WriteCorrelationCSV writes the correlation matrix to a CSV file.
 // The first row/column contain gene names as headers.
-func WriteCorrelationCSV(filename string, sortedGeneNames []string, corrMatrix [][]float64) error {
+func WriteCorrelationCSV(filename string, sortedGeneNames []string, corrMatrix CorrelationMatrix) error {
 	f, err := os.Create(filename)
 	if err != nil {
 		return err
@@ -241,7 +240,7 @@ func WriteCorrelationCSV(filename string, sortedGeneNames []string, corrMatrix [
 // need to go thru the matrix, append all the values into a growing slice
 // sort the slice
 // call the quantile operation from the stats package to compute the 90 95 99%
-func TransformMatrixToSlice(BreastPearsonCorrelationMatrix [][]float64) []float64 {
+func TransformMatrixToSlice(BreastPearsonCorrelationMatrix CorrelationMatrix) []float64 {
 	quantileSlice := make([]float64, 0)
 
 	numRows := len(BreastPearsonCorrelationMatrix)
@@ -283,7 +282,7 @@ func ComputeQuantile(quantileSlice []float64) []float64 {
 // if there is an edge between correlated genes based on the computed threshold and builds a graph network.
 // If the absolute value of the correlation between 2 genes is >= 0.65, then there is an edge between those
 // two genes (nodes)
-func BuildGraph(BreastPearsonCorrelationMatrix [][]float64, breastGeneNames []string, threshold float64) GraphNetwork {
+func BuildGraph(BreastPearsonCorrelationMatrix CorrelationMatrix, breastGeneNames []string, threshold float64) GraphNetwork {
 
 	numGenes := len(BreastPearsonCorrelationMatrix)
 	numCols := len(BreastPearsonCorrelationMatrix[0])

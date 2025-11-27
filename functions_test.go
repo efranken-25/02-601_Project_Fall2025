@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -11,7 +10,7 @@ import (
 
 type TransformMapToSliceTest struct {
 	geneName                string
-	geneExpressionBreastMap map[string]map[string]float64
+	geneExpressionBreastMap ExpressionMap
 	result                  []float64
 }
 
@@ -116,35 +115,8 @@ func ReadTransformMapToSliceTests(directory string) []TransformMapToSliceTest {
 	return tests
 }
 
-// Helper: read files from a directory
-func ReadDirectory(dir string) []os.DirEntry {
-	files, err := os.ReadDir(dir)
-	if err != nil {
-		panic(err)
-	}
-	return files
-}
-
-// Helper: compare slices ignoring order
-func floatSlicesEqualUnordered(a, b []float64) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	freq := make(map[float64]int)
-	for _, x := range a {
-		freq[x]++
-	}
-	for _, x := range b {
-		freq[x]--
-		if freq[x] < 0 {
-			return false
-		}
-	}
-	return true
-}
-
 type GetSampleNamesTest struct {
-	geneExpressionBreastMap map[string]map[string]float64
+	geneExpressionBreastMap ExpressionMap
 	result                  []string
 }
 
@@ -158,24 +130,6 @@ func TestGetSampleNames(t *testing.T) {
 				got, test.result)
 		}
 	}
-}
-
-// Helper: compare string slices ignoring order
-func stringSlicesEqualUnordered(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	freq := make(map[string]int)
-	for _, s := range a {
-		freq[s]++
-	}
-	for _, s := range b {
-		freq[s]--
-		if freq[s] < 0 {
-			return false
-		}
-	}
-	return true
 }
 
 func ReadGetSampleNamesTests(directory string) []GetSampleNamesTest {
@@ -262,7 +216,7 @@ func ReadGetSampleNamesTests(directory string) []GetSampleNamesTest {
 }
 
 type GetGeneNamesTest struct {
-	geneExpressionBreastMap map[string]map[string]float64
+	geneExpressionBreastMap ExpressionMap
 	result                  []string
 }
 
@@ -275,19 +229,6 @@ func TestGetGeneNames(t *testing.T) {
 				got, test.result)
 		}
 	}
-}
-
-// Helper: compare string slices with order
-func stringSlicesEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func ReadGetGeneNamesTests(directory string) []GetGeneNamesTest {
@@ -374,10 +315,10 @@ func ReadGetGeneNamesTests(directory string) []GetGeneNamesTest {
 }
 
 type MeanBasedFilterTest struct {
-	geneExpressionBreastMap map[string]map[string]float64
+	geneExpressionBreastMap ExpressionMap
 	samples                 []string
 	meanThresh              float64
-	result                  map[string]map[string]float64
+	result                  ExpressionMap
 }
 
 func TestMeanBasedFilter(t *testing.T) {
@@ -389,26 +330,6 @@ func TestMeanBasedFilter(t *testing.T) {
 				got, test.result)
 		}
 	}
-}
-
-// Helper: compare nested float maps
-func nestedFloatMapsEqual(a, b map[string]map[string]float64) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for g, rowA := range a {
-		rowB, ok := b[g]
-		if !ok || len(rowA) != len(rowB) {
-			return false
-		}
-		for s, valA := range rowA {
-			valB, ok := rowB[s]
-			if !ok || valA != valB {
-				return false
-			}
-		}
-	}
-	return true
 }
 
 func ReadMeanBasedFilterTests(directory string) []MeanBasedFilterTest {
@@ -428,7 +349,7 @@ func ReadMeanBasedFilterTests(directory string) []MeanBasedFilterTest {
 		scanner := bufio.NewScanner(f)
 
 		current := MeanBasedFilterTest{
-			geneExpressionBreastMap: make(map[string]map[string]float64),
+			geneExpressionBreastMap: make(ExpressionMap),
 		}
 		var currentMapKey string
 
@@ -488,7 +409,7 @@ func ReadMeanBasedFilterTests(directory string) []MeanBasedFilterTest {
 			panic(err)
 		}
 		scanner := bufio.NewScanner(f)
-		resultMap := make(map[string]map[string]float64)
+		resultMap := make(ExpressionMap)
 
 		var currentGene string
 		for scanner.Scan() {
@@ -596,8 +517,8 @@ func ReadSortSampleNamesTests(directory string) []SortSampleNamesTest {
 type ComputePearsonTest struct {
 	sortedGeneNames        []string
 	sortedSampleNames      []string
-	filteredGeneExpression map[string]map[string]float64
-	result                 [][]float64
+	filteredGeneExpression ExpressionMap
+	result                 CorrelationMatrix
 }
 
 func TestComputePearsonCorrelation(t *testing.T) {
@@ -634,7 +555,7 @@ func ReadComputePearsonTests(directory string) []ComputePearsonTest {
 
 		scanner := bufio.NewScanner(f)
 		current := ComputePearsonTest{
-			filteredGeneExpression: make(map[string]map[string]float64),
+			filteredGeneExpression: make(ExpressionMap),
 		}
 		var currentGene string
 		for scanner.Scan() {
@@ -703,20 +624,232 @@ func ReadComputePearsonTests(directory string) []ComputePearsonTest {
 	return tests
 }
 
-// Compare two matrices, treating NaNs as equal
-func floatMatrixEqual(a, b [][]float64, tol float64) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if len(a[i]) != len(b[i]) {
-			return false
+type TransformMatrixToSliceTest struct {
+	matrix CorrelationMatrix
+	result []float64
+}
+
+// TestTransformMatrixToSlice tests the TransformMatrixToSlice function.
+func TestTransformMatrixToSlice(t *testing.T) {
+	tests := ReadTransformMatrixToSliceTests("Tests/TransformMatrixToSlice")
+	for _, test := range tests {
+		got := TransformMatrixToSlice(test.matrix)
+		if !floatSlicesEqualUnordered(got, test.result) {
+			t.Errorf("TransformMatrixToSlice failed.\nGot: %v\nWant: %v",
+				got, test.result)
 		}
-		for j := range a[i] {
-			if math.Abs(a[i][j]-b[i][j]) > tol {
-				return false
+	}
+}
+
+// ReadTransformMatrixToSliceTests reads Input/Output files for matrix tests
+func ReadTransformMatrixToSliceTests(directory string) []TransformMatrixToSliceTest {
+	inputFiles := ReadDirectory(directory + "/Input")
+	outputFiles := ReadDirectory(directory + "/Output")
+	if len(inputFiles) != len(outputFiles) {
+		panic("number of input and output files do not match")
+	}
+
+	tests := make([]TransformMatrixToSliceTest, len(inputFiles))
+
+	//read input files
+	for i, inputFile := range inputFiles {
+		f, err := os.Open(directory + "/Input/" + inputFile.Name())
+		if err != nil {
+			panic(err)
+		}
+		scanner := bufio.NewScanner(f)
+
+		current := TransformMatrixToSliceTest{}
+		var matrix CorrelationMatrix
+
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+
+			// Expecting matrix rows like:
+			// 1.0, 0.2, 0.5
+			rowParts := strings.Split(line, ",")
+			row := make([]float64, 0, len(rowParts))
+
+			for _, p := range rowParts {
+				valStr := strings.TrimSpace(p)
+				if valStr == "" {
+					continue
+				}
+				v, err := strconv.ParseFloat(valStr, 64)
+				if err != nil {
+					panic(err)
+				}
+				row = append(row, v)
+			}
+
+			if len(row) > 0 {
+				matrix = append(matrix, row)
 			}
 		}
+
+		f.Close()
+		current.matrix = matrix
+		tests[i] = current
 	}
-	return true
+
+	//read output files
+	for i, outputFile := range outputFiles {
+		f, err := os.Open(directory + "/Output/" + outputFile.Name())
+		if err != nil {
+			panic(err)
+		}
+		scanner := bufio.NewScanner(f)
+
+		outputVals := []float64{}
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+
+			for _, p := range strings.Split(line, ",") {
+				valStr := strings.TrimSpace(p)
+				if valStr == "" {
+					continue
+				}
+				v, err := strconv.ParseFloat(valStr, 64)
+				if err != nil {
+					panic(err)
+				}
+				outputVals = append(outputVals, v)
+			}
+		}
+
+		f.Close()
+		tests[i].result = outputVals
+	}
+
+	return tests
+}
+
+type SortCorrValsTest struct {
+	quantileSlice []float64
+	result        []float64
+}
+
+func TestSortCorrValues(t *testing.T) {
+
+	tests := ReadSortCorrValsTests("Tests/SortCorrVals")
+	for _, test := range tests {
+		got := SortCorrVals(append([]float64{}, test.quantileSlice...))
+
+		if !floatSlicesEqualUnordered(got, test.result) {
+			t.Errorf("SortCorrValues failed .\nquantileSlice: %v\nGot: %v\nWant: %v", test.quantileSlice, got, test.result)
+		}
+	}
+
+}
+
+func ReadSortCorrValsTests(directory string) []SortCorrValsTest {
+	inputFiles := ReadDirectory(directory + "/Input")
+	outputFiles := ReadDirectory(directory + "/Output")
+
+	if len(inputFiles) != len(outputFiles) {
+		panic("number of input and output files do not match")
+	}
+
+	tests := make([]SortCorrValsTest, len(inputFiles))
+
+	//read input files
+	for i, inputFile := range inputFiles {
+		path := directory + "/Input/" + inputFile.Name()
+		data, err := os.ReadFile(path)
+		if err != nil {
+			panic(err)
+		}
+
+		vals := parseFloatList(string(data))
+		tests[i].quantileSlice = vals
+	}
+
+	//read output files
+	for i, outputFile := range outputFiles {
+		path := directory + "/Output/" + outputFile.Name()
+		data, err := os.ReadFile(path)
+		if err != nil {
+			panic(err)
+		}
+
+		vals := parseFloatList(string(data))
+		tests[i].result = vals
+	}
+
+	return tests
+}
+
+// ComputeQuantileTest represents a single test for the ComputeQuntile function.
+// It contains the input slice of floats and the expected results (quantiles).
+type ComputeQuantileTest struct {
+	quantileSlice []float64
+	result        []float64
+}
+
+// TestComputeQuantile runs tests for the ComputeQuantile function.
+func TestComputeQuantile(t *testing.T) {
+	//read through all test cases from directory
+	tests := ReadComputeQuantileTests("Tests/ComputeQuantile")
+
+	//loop through each test case
+	for _, test := range tests {
+		//compute quantiles for the input slice
+		got := ComputeQuantile(test.quantileSlice)
+
+		// Round each value to 3 decimals for comparison
+		for i := range got {
+			got[i] = roundFloat(got[i], 3)
+		}
+
+		//Compare computed results with expected results. If they are not the same, an error will print out.
+		if !floatSlicesEqualOrdered(got, test.result) {
+			t.Errorf("ComputeQuantile failed.\nInput: %v\nGot: %v\nWant: %v",
+				test.quantileSlice, got, test.result)
+		}
+	}
+}
+
+// ReadComputeQuantileTests reads input and output test files from a directory and results a slice of ComputeQuantileTest structs.
+func ReadComputeQuantileTests(directory string) []ComputeQuantileTest {
+	//list all the input and output files from the directory
+	inputFiles := ReadDirectory(directory + "/Input")
+	outputFiles := ReadDirectory(directory + "/Output")
+
+	//make sure the number of input and output files match
+	if len(inputFiles) != len(outputFiles) {
+		panic("number of input and output files do not match")
+	}
+
+	//initialzie a slice to store all of the test cases
+	tests := make([]ComputeQuantileTest, len(inputFiles))
+
+	//Read input files
+	for i, inputFile := range inputFiles {
+		path := directory + "/Input/" + inputFile.Name()
+		data, err := os.ReadFile(path)
+		if err != nil {
+			panic(err)
+		}
+		//parse through the input string into a slice of floats
+		tests[i].quantileSlice = parseFloatList(string(data))
+	}
+
+	//Read output files
+	for i, outputFile := range outputFiles {
+		path := directory + "/Output/" + outputFile.Name()
+		data, err := os.ReadFile(path)
+		if err != nil {
+			panic(err)
+		}
+		//parse the expected quantiles into slice of floats
+		tests[i].result = parseFloatList(string(data))
+	}
+
+	return tests
 }
