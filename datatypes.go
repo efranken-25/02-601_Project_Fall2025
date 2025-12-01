@@ -2,7 +2,7 @@
 //Programming for Scientists Project
 //October 31, 2025
 
-package main //
+package main //s
 
 type ExpressionMap map[string]map[string]float64
 
