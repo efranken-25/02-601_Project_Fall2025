@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/csv"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,7 +22,7 @@ Step 2: filter low-expression genes
 
 // ParseGeneExpressionFile reads a tab-separated gene expression file and returns
 // a map from gene_name -> tpm_unstranded for rows where gene_type == "protein_coding"
-
+// *Copilot Generated*
 func ParseGeneExpressionFile(path string) (map[string]float64, error) {
 	geneTpm := make(map[string]float64)
 
@@ -101,6 +102,7 @@ func ParseGeneExpressionFile(path string) (map[string]float64, error) {
 // ReadGeneExpressionDirToGeneMap reads all files in dir that match "*_gene_counts.tsv"
 // and returns a map[gene_name]map[sampleID]tpm_unstranded. It uses ParseGeneExpressionFile
 // (which already filters to protein_coding).
+// *Copilot Generated*
 func ReadGeneExpressionDirToGeneMap(dir string) (map[string]map[string]float64, error) {
 	geneMap := make(map[string]map[string]float64)
 
@@ -142,4 +144,84 @@ func ReadGeneExpressionDirToGeneMap(dir string) (map[string]map[string]float64, 
 	}
 
 	return geneMap, nil
+}
+
+// *ChatGPT generated*
+// WriteEdgesCSV writes the edges of a graph network to a CSV file.
+// The CSV contains columns: from, to, weight.
+// To avoid duplicate edges in undirected graphs, only writes edges where source ID < target ID.
+func WriteEdgesCSV(filename string, breastGraph GraphNetwork) error {
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	w := csv.NewWriter(f)
+	defer w.Flush()
+
+	// header
+	if err := w.Write([]string{"from", "to", "weight"}); err != nil {
+		return err
+	}
+
+	// Avoid duplicate edges: since graph is undirected and you stored edges both ways,
+	// only write when u.ID < v.ID.
+	for _, u := range breastGraph {
+		for _, e := range u.Edges {
+			v := e.To
+			if u.ID < v.ID {
+				record := []string{
+					u.GeneName, // from (gene name)
+					v.GeneName, // to   (gene name)
+					strconv.FormatFloat(e.Weight, 'f', 6, 64),
+				}
+				if err := w.Write(record); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// *ChatGPT generated*
+// WriteCommunitiesCSV writes node community assignments to a CSV file.
+// The CSV contains columns: id, label, community.
+// Each row represents a gene with its assigned community ID.
+func WriteCommunitiesCSV(filename string, breastGeneNames []string, communities map[int]int) error {
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	w := csv.NewWriter(f)
+	defer w.Flush()
+
+	// header
+	if err := w.Write([]string{"id", "label", "community"}); err != nil {
+		return err
+	}
+
+	for nodeID, gene := range breastGeneNames {
+		commID, ok := communities[nodeID]
+		if !ok {
+			// should not usually happen, but skip if not present
+			continue
+		}
+
+		record := []string{
+			gene,                 // id (used by visNetwork internally)
+			gene,                 // label (what you see)
+			strconv.Itoa(commID), // community (cluster ID)
+		}
+
+		if err := w.Write(record); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

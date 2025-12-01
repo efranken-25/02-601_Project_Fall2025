@@ -1,0 +1,12 @@
+plan.md
+hehe.sh
+
+output/
+data/
+results/
+
+*.txt
+*.jsonl
+*.json
+*.log
+*.png
