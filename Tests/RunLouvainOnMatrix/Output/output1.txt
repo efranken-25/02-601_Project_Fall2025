@@ -1,0 +1,6 @@
+# Modularity
+0.25
+# Communities
+0 0
+1 0
+2 1
