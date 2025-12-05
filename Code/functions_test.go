@@ -22,7 +22,7 @@ func TestTransformMapToSlice(t *testing.T) {
 	tests := ReadTransformMapToSliceTests("Tests/TransformMapToSlice")
 	for _, test := range tests {
 		got := TransformMapToSlice(test.geneName, test.geneExpressionBreastMap)
-		if !floatSlicesEqualUnordered(got, test.result) {
+		if !FloatSlicesEqualUnordered(got, test.result) {
 			t.Errorf("TransformMapToSlice(%s) failed.\nGot: %v\nWant: %v",
 				test.geneName, got, test.result)
 		}
@@ -128,7 +128,7 @@ func TestGetSampleNames(t *testing.T) {
 	tests := ReadGetSampleNamesTests("Tests/GetSampleNames")
 	for _, test := range tests {
 		got := GetSampleNames(test.geneExpressionBreastMap)
-		if !stringSlicesEqualUnordered(got, test.result) {
+		if !StringSlicesEqualUnordered(got, test.result) {
 			t.Errorf("GetSampleNames() failed.\nGot: %v\nWant: %v",
 				got, test.result)
 		}
@@ -227,7 +227,7 @@ func TestGetGeneNames(t *testing.T) {
 	tests := ReadGetGeneNamesTests("Tests/GetGeneNames")
 	for _, test := range tests {
 		got := GetGeneNames(test.geneExpressionBreastMap)
-		if !stringSlicesEqual(got, test.result) {
+		if !StringSlicesEqual(got, test.result) {
 			t.Errorf("GetGeneNames() failed.\nGot: %v\nWant: %v",
 				got, test.result)
 		}
@@ -328,7 +328,7 @@ func TestMeanBasedFilter(t *testing.T) {
 	tests := ReadMeanBasedFilterTests("Tests/MeanBasedFilter")
 	for _, test := range tests {
 		got := MeanBasedFilter(test.geneExpressionBreastMap, test.samples, test.meanThresh)
-		if !nestedFloatMapsEqual(got, test.result) {
+		if !NestedFloatMapsEqual(got, test.result) {
 			t.Errorf("MeanBasedFilter() failed.\nGot: %v\nWant: %v",
 				got, test.result)
 		}
@@ -461,7 +461,7 @@ func TestSortSampleNames(t *testing.T) {
 		copy(cpy, test.samples)
 
 		sortSampleNames(cpy)
-		if !stringSlicesEqual(cpy, test.result) {
+		if !StringSlicesEqual(cpy, test.result) {
 			t.Errorf("sortSampleNames(%v) failed.\nGot: %v\nWant: %v",
 				test.samples, cpy, test.result)
 		}
@@ -532,7 +532,7 @@ func TestComputePearsonCorrelation(t *testing.T) {
 			test.sortedSampleNames,
 			test.filteredGeneExpression,
 		)
-		if !floatMatrixEqual(got, test.result, 1e-6) {
+		if !FloatMatrixEqual(got, test.result, 1e-6) {
 			t.Errorf("ComputePearsonCorrelation failed.\nGot: %v\nWant: %v",
 				got, test.result)
 		}
@@ -637,7 +637,7 @@ func TestTransformMatrixToSlice(t *testing.T) {
 	tests := ReadTransformMatrixToSliceTests("Tests/TransformMatrixToSlice")
 	for _, test := range tests {
 		got := TransformMatrixToSlice(test.matrix)
-		if !floatSlicesEqualUnordered(got, test.result) {
+		if !FloatSlicesEqualUnordered(got, test.result) {
 			t.Errorf("TransformMatrixToSlice failed.\nGot: %v\nWant: %v",
 				got, test.result)
 		}
@@ -744,7 +744,7 @@ func TestSortCorrValues(t *testing.T) {
 	for _, test := range tests {
 		got := SortCorrVals(append([]float64{}, test.quantileSlice...))
 
-		if !floatSlicesEqualUnordered(got, test.result) {
+		if !FloatSlicesEqualUnordered(got, test.result) {
 			t.Errorf("SortCorrValues failed .\nquantileSlice: %v\nGot: %v\nWant: %v", test.quantileSlice, got, test.result)
 		}
 	}
@@ -769,7 +769,7 @@ func ReadSortCorrValsTests(directory string) []SortCorrValsTest {
 			panic(err)
 		}
 
-		vals := parseFloatList(string(data))
+		vals := ParseFloatList(string(data))
 		tests[i].quantileSlice = vals
 	}
 
@@ -781,7 +781,7 @@ func ReadSortCorrValsTests(directory string) []SortCorrValsTest {
 			panic(err)
 		}
 
-		vals := parseFloatList(string(data))
+		vals := ParseFloatList(string(data))
 		tests[i].result = vals
 	}
 
@@ -807,11 +807,11 @@ func TestComputeQuantile(t *testing.T) {
 
 		// Round each value to 3 decimals for comparison
 		for i := range got {
-			got[i] = roundFloat(got[i], 3)
+			got[i] = RoundFloat(got[i], 3)
 		}
 
 		//Compare computed results with expected results. If they are not the same, an error will print out.
-		if !floatSlicesEqualOrdered(got, test.result) {
+		if !FloatSlicesEqualOrdered(got, test.result) {
 			t.Errorf("ComputeQuantile failed.\nInput: %v\nGot: %v\nWant: %v",
 				test.quantileSlice, got, test.result)
 		}
@@ -840,7 +840,7 @@ func ReadComputeQuantileTests(directory string) []ComputeQuantileTest {
 			panic(err)
 		}
 		//parse through the input string into a slice of floats
-		tests[i].quantileSlice = parseFloatList(string(data))
+		tests[i].quantileSlice = ParseFloatList(string(data))
 	}
 
 	//Read output files
@@ -851,7 +851,7 @@ func ReadComputeQuantileTests(directory string) []ComputeQuantileTest {
 			panic(err)
 		}
 		//parse the expected quantiles into slice of floats
-		tests[i].result = parseFloatList(string(data))
+		tests[i].result = ParseFloatList(string(data))
 	}
 
 	return tests
@@ -879,7 +879,7 @@ func TestBuildGraph(t *testing.T) {
 				got = append(got, edge.To.ID)
 			}
 
-			if !intSlicesEqualOrdered(got, expected) {
+			if !IntSlicesEqualOrdered(got, expected) {
 				t.Errorf("BuildGraph failed.\nNode: %d\nGot: %v\nWant: %v",
 					nodeID, got, expected)
 			}
@@ -949,7 +949,7 @@ func parseBuildGraphInput(data string) BuildGraphTest {
 				test.geneNames = strings.Split(line, ",")
 
 			case "matrix":
-				row := parseFloatList(line)
+				row := ParseFloatList(line)
 				test.corrMatrix = append(test.corrMatrix, row)
 			}
 		}
@@ -1002,7 +1002,7 @@ func TestBuildLouvainGraph(t *testing.T) {
 		graph := BuildLouvainGraph(test.Matrix, test.Threshold)
 
 		// Extract edges in a map: key = [2]int{u,v}, value = weight
-		gotEdges := extractEdgesFromGraph(graph) // map[[2]int]float64
+		gotEdges := ExtractEdgesFromGraph(graph) // map[[2]int]float64
 
 		// Check each expected edge
 		for _, e := range test.ExpectedEdges {
@@ -1119,7 +1119,7 @@ func ReadBuildLouvainGraphTests(inputDir, outputDir string) []BuildLouvainGraphT
 			panic(err)
 		}
 
-		test.ExpectedEdges = parseEdges(strings.NewReader(string(outData)))
+		test.ExpectedEdges = ParseEdges(strings.NewReader(string(outData)))
 
 		tests = append(tests, test)
 	}
@@ -1150,7 +1150,7 @@ func TestRunLouvainOnMatrix(t *testing.T) {
 		}
 
 		// Compare communities: allow relabeling
-		if !compareCommunities(gotComm, test.ExpectedComm) {
+		if !CompareCommunities(gotComm, test.ExpectedComm) {
 			t.Errorf("community assignment mismatch.\nGot: %v\nWant: %v", gotComm, test.ExpectedComm)
 		}
 	}
@@ -1478,8 +1478,8 @@ func TestComputeAverageDegree(t *testing.T) {
 		got := ComputeAverageDegree(test.NumEdges, test.NumNodes)
 
 		// Round to 6 decimals for comparison
-		got = roundFloat(got, 6)
-		want := roundFloat(test.Result, 6)
+		got = RoundFloat(got, 6)
+		want := RoundFloat(test.Result, 6)
 
 		if math.Abs(got-want) > 1e-6 {
 			t.Errorf("ComputeAverageDegree failed.\nNumEdges: %d\nNumNodes: %d\nGot: %.6f\nWant: %.6f",
@@ -1553,8 +1553,8 @@ func TestComputeEdgeDensity(t *testing.T) {
 		got := ComputeEdgeDensity(test.NumEdges, test.NumNodes)
 
 		// Round to 6 decimals for comparison
-		got = roundFloat(got, 6)
-		want := roundFloat(test.Result, 6)
+		got = RoundFloat(got, 6)
+		want := RoundFloat(test.Result, 6)
 
 		if math.Abs(got-want) > 1e-6 {
 			t.Errorf("ComputeEdgeDensity failed.\nNumEdges: %d\nNumNodes: %d\nGot: %.6f\nWant: %.6f",
@@ -1649,7 +1649,7 @@ func ReadEdgeStatsTests(directory string) []EdgeStatsTest {
 		if err != nil {
 			panic(err)
 		}
-		tests[i].Graph = parseGraphNetwork(string(data))
+		tests[i].Graph = ParseGraphNetwork(string(data))
 	}
 
 	for i, outputFile := range outputFiles {
@@ -1658,7 +1658,7 @@ func ReadEdgeStatsTests(directory string) []EdgeStatsTest {
 		if err != nil {
 			panic(err)
 		}
-		tests[i].ExpectedPos, tests[i].ExpectedNeg = parseEdgeStatsOutput(string(data))
+		tests[i].ExpectedPos, tests[i].ExpectedNeg = ParseEdgeStatsOutput(string(data))
 	}
 
 	return tests
@@ -1713,7 +1713,7 @@ func ReadComputeModuleSizesTests(inputDir, outputDir string) []ComputeModuleSize
 		if err != nil {
 			panic(err)
 		}
-		tests[i].ClusterMap = parseClusterMap(string(inputData))
+		tests[i].ClusterMap = ParseClusterMap(string(inputData))
 	}
 
 	for i, outputFile := range outputFiles {
@@ -1721,7 +1721,7 @@ func ReadComputeModuleSizesTests(inputDir, outputDir string) []ComputeModuleSize
 		if err != nil {
 			panic(err)
 		}
-		tests[i].ExpectedSizes = parseModuleSizes(string(outputData))
+		tests[i].ExpectedSizes = ParseModuleSizes(string(outputData))
 	}
 
 	return tests
@@ -1768,8 +1768,8 @@ func ReadTotalNumGenesTests(directory string) []TotalNumGenesTest {
 			panic("expected 2 lines in input file")
 		}
 
-		tests[i].BreastGenes = parseStringList(lines[0])
-		tests[i].OvarianGenes = parseStringList(lines[1])
+		tests[i].BreastGenes = ParseStringList(lines[0])
+		tests[i].OvarianGenes = ParseStringList(lines[1])
 	}
 
 	for i, outputFile := range outputFiles {

@@ -11,7 +11,9 @@ import (
 	"strings"
 )
 
-func parseFloatList(text string) []float64 {
+// ParseFloatList takes a string as input and returns a slice of float64 parsed from that string.
+// It also ignores the empty lines and comment lines starting with #
+func ParseFloatList(text string) []float64 {
 	lines := strings.Split(text, "\n")
 	vals := []float64{}
 
@@ -39,8 +41,9 @@ func parseFloatList(text string) []float64 {
 	return vals
 }
 
-// Compare two matrices, treating NaNs as equal
-func floatMatrixEqual(a, b [][]float64, tol float64) bool {
+// FloatMatrixEqual checks whether two 2-D slices of float64 are equal within a given tolerance.
+// Returns a boolean variable corresponding to whether or not the matrices are equal.
+func FloatMatrixEqual(a, b [][]float64, tol float64) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -57,8 +60,9 @@ func floatMatrixEqual(a, b [][]float64, tol float64) bool {
 	return true
 }
 
-// Helper: compare nested float maps
-func nestedFloatMapsEqual(a, b ExpressionMap) bool {
+// NestedFloatMapsEqual compares two nested maps of floats for exact equality.
+// Returns a boolean variable corresponding to whether or not the maps are equal.
+func NestedFloatMapsEqual(a, b ExpressionMap) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -77,8 +81,9 @@ func nestedFloatMapsEqual(a, b ExpressionMap) bool {
 	return true
 }
 
-// Helper: compare string slices with order
-func stringSlicesEqual(a, b []string) bool {
+// StringSlicesEqual checks whether two slices of strings are exactly equal.
+// Returns a boolean variable corresponding to whether or not the slices are equal.
+func StringSlicesEqual(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -90,8 +95,9 @@ func stringSlicesEqual(a, b []string) bool {
 	return true
 }
 
-// Helper: compare string slices ignoring order
-func stringSlicesEqualUnordered(a, b []string) bool {
+// StringsSlicesEqualUnordered checks whether 2 slices of strings contain the same elements with the same multiplicities, and ignores the order.
+// Returns a boolean variable corresponding to whether or not the slices are equal.
+func StringSlicesEqualUnordered(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -108,7 +114,7 @@ func stringSlicesEqualUnordered(a, b []string) bool {
 	return true
 }
 
-// Helper: read files from a directory
+// ReadDirectory reads all entries in a directory and returns them as a slice of os.DirEntry.
 func ReadDirectory(dir string) []os.DirEntry {
 	files, err := os.ReadDir(dir)
 	if err != nil {
@@ -117,9 +123,9 @@ func ReadDirectory(dir string) []os.DirEntry {
 	return files
 }
 
-// floatSlicesEqualUnordered checks if two float64 slices contain the same elements,
-// ignoring order. Uses a tolerance for floating-point comparison.
-func floatSlicesEqualUnordered(a, b []float64) bool {
+// FloatSlicesEqualUnordered checks if two float64 slices contain the same elements,
+// Ignores order. Uses a tolerance for floating-point comparison.
+func FloatSlicesEqualUnordered(a, b []float64) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -131,13 +137,13 @@ func floatSlicesEqualUnordered(a, b []float64) bool {
 
 	// Count elements in a
 	for _, val := range a {
-		key := roundFloat(val, decimals)
+		key := RoundFloat(val, decimals)
 		countMap[key]++
 	}
 
 	// Subtract counts using elements from b
 	for _, val := range b {
-		key := roundFloat(val, decimals)
+		key := RoundFloat(val, decimals)
 		countMap[key]--
 		if countMap[key] < 0 {
 			return false
@@ -147,13 +153,15 @@ func floatSlicesEqualUnordered(a, b []float64) bool {
 	return true
 }
 
-// roundFloat rounds a float64 to the specified number of decimal places
-func roundFloat(f float64, decimals int) float64 {
+// RoundFloat rounds a float64 to the specified number of decimal places
+func RoundFloat(f float64, decimals int) float64 {
 	factor := math.Pow(10, float64(decimals))
 	return math.Round(f*factor) / factor
 }
 
-func floatSlicesApproxEqual(a, b []float64, tol float64) bool {
+// FloatSlicesApproxEqual checks whether two slices of float64 are approx equal element by element, using a tolerance.
+// Returns a boolean variable corresponding to whether or not the slices are equal.
+func FloatSlicesApproxEqual(a, b []float64, tol float64) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -165,23 +173,25 @@ func floatSlicesApproxEqual(a, b []float64, tol float64) bool {
 	return true
 }
 
-// floatSlicesEqualOrdered checks if two slices are equal element by element,
+// FloatSlicesEqualOrdered checks if two slices are equal element by element,
 // using rounding to avoid floating-point precision issues.
-func floatSlicesEqualOrdered(a, b []float64) bool {
+func FloatSlicesEqualOrdered(a, b []float64) bool {
 	if len(a) != len(b) {
 		return false
 	}
 
 	decimals := 9 // number of decimals to round to for comparison
 	for i := range a {
-		if roundFloat(a[i], decimals) != roundFloat(b[i], decimals) {
+		if RoundFloat(a[i], decimals) != RoundFloat(b[i], decimals) {
 			return false
 		}
 	}
 	return true
 }
 
-func intSlicesEqualOrdered(a, b []int) bool {
+// IntSlicesEqualOrdered checks whether 2 []int slices are exactly equal, element-by-element, in the same order.
+// Returns a boolean variable corresponding to whether or not the slices are equal.
+func IntSlicesEqualOrdered(a, b []int) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -193,7 +203,8 @@ func intSlicesEqualOrdered(a, b []int) bool {
 	return true
 }
 
-func extractEdgesFromGraph(g *louvain.Graph) map[[2]int]float64 {
+// ExtractEdgesFromGraph extracts all unique edges from a louvain.Graph and returns them in a map where the key is a 2-element array representing an undirected edge and the value is the weight of that edge
+func ExtractEdgesFromGraph(g *louvain.Graph) map[[2]int]float64 {
 	edges := make(map[[2]int]float64)
 
 	for u := 0; u < g.NumNodes; u++ {
@@ -206,7 +217,8 @@ func extractEdgesFromGraph(g *louvain.Graph) map[[2]int]float64 {
 	return edges
 }
 
-func parseEdges(r *strings.Reader) [][3]float64 {
+// ParseEdges reads a list of edges from a text source and returns them as a slice of [3]float64.
+func ParseEdges(r *strings.Reader) [][3]float64 {
 	var edges [][3]float64
 	scanner := bufio.NewScanner(r)
 
@@ -234,7 +246,9 @@ func parseEdges(r *strings.Reader) [][3]float64 {
 	return edges
 }
 
-func compareCommunities(a, b map[int]int) bool {
+// CompareCommunities checks whether 2 community assignments (a and b) of nodes are structurally equivalent, ignoring the actual numeric labels.
+// Returns a boolean variable corresponding to whether or not the maps are equal.
+func CompareCommunities(a, b map[int]int) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -254,10 +268,9 @@ func compareCommunities(a, b map[int]int) bool {
 	return true
 }
 
-// parseGraphNetwork parses input string into GraphNetwork
-// Expected input format: one node per line, e.g.:
-// 0 G1 1:0.5,2:-0.3
-func parseGraphNetwork(input string) GraphNetwork {
+// ParseGraphNetwork parses input string into GraphNetwork
+// Expected input format: one node per line, e.g.: 0 G1 1:0.5,2:-0.3
+func ParseGraphNetwork(input string) GraphNetwork {
 	lines := strings.Split(strings.TrimSpace(input), "\n")
 	graph := make(GraphNetwork, len(lines))
 
@@ -287,18 +300,18 @@ func parseGraphNetwork(input string) GraphNetwork {
 	return graph
 }
 
-// parseEdgeStatsOutput parses output string into pos and neg integers
+// ParseEdgeStatsOutput parses output string into pos and neg integers
 // Expected output format: two integers separated by space, e.g.:
 // 3 1
-func parseEdgeStatsOutput(output string) (int, int) {
+func ParseEdgeStatsOutput(output string) (int, int) {
 	parts := strings.Fields(strings.TrimSpace(output))
 	pos, _ := strconv.Atoi(parts[0])
 	neg, _ := strconv.Atoi(parts[1])
 	return pos, neg
 }
 
-// Helper: parse cluster map from file
-func parseClusterMap(data string) map[int]int {
+// ParseClusterMap reads a textual representation of a community assingment and returns it as a map.
+func ParseClusterMap(data string) map[int]int {
 	lines := strings.Split(strings.TrimSpace(data), "\n")
 	clusterMap := make(map[int]int)
 	for _, line := range lines {
@@ -313,8 +326,8 @@ func parseClusterMap(data string) map[int]int {
 	return clusterMap
 }
 
-// Helper: parse expected module sizes from file
-func parseModuleSizes(data string) map[int]int {
+// ParseModuleSizes reads a textual representation of module sizes and returns it as a map
+func ParseModuleSizes(data string) map[int]int {
 	lines := strings.Split(strings.TrimSpace(data), "\n")
 	sizes := make(map[int]int)
 	for _, line := range lines {
@@ -329,7 +342,8 @@ func parseModuleSizes(data string) map[int]int {
 	return sizes
 }
 
-func parseStringList(s string) []string {
+// ParseStringList takes a string contain comma-separated values and returns a slice of trimmed, non-empty strings.
+func ParseStringList(s string) []string {
 	parts := strings.Split(strings.TrimSpace(s), ",")
 	result := make([]string, 0, len(parts))
 	for _, p := range parts {
