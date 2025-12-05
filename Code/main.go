@@ -10,7 +10,7 @@ func main() {
 
 	//Begin Analyzing Breast Cancer RNA seq gene count Data
 	// Create a map of maps. Nested map mapping gene_name (string) to sampleID(string) to tpm value
-	geneExpressionBreastMap, err1 := ReadGeneExpressionDirToGeneMap("/Users/bethany/ProgrammingProject/GeneExpressionData/BreastData")
+	geneExpressionBreastMap, err1 := ReadGeneExpressionDirToGeneMap("/02-601_Project_Fall2025/GeneExpressionData/BreastData")
 
 	// log any errors that may arise from the parsing/ reading in the breast data files
 	if err1 != nil {
@@ -21,7 +21,7 @@ func main() {
 
 	//Begin Analyzing Ovarian Cancer RNA seq gene count Data
 	//Create a map of maps. Nested map mapping gene_name (string) to sampleID(string) to tpm value
-	geneExpressionOvarianMap, err2 := ReadGeneExpressionDirToGeneMap("/Users/bethany/ProgrammingProject/GeneExpressionData/OvarianData")
+	geneExpressionOvarianMap, err2 := ReadGeneExpressionDirToGeneMap("/02-601_Project_Fall2025/GeneExpressionData/OvarianData")
 
 	// log any errors that may arise from the parsing/ reading in the ovarian data files
 	if err2 != nil {
@@ -297,13 +297,13 @@ func main() {
 	//Write gene network and community assignments to CSV files
 	fmt.Println("Writing breast cancer gene network and community assignments to CSV files...")
 
-	err3 := WriteCommunitiesCSV("/Users/bethany/ProgrammingProject/ShinyApp/breast_nodes_communities.csv", breastGeneNames, breastClusterMap)
+	err3 := WriteCommunitiesCSV("/02-601_Project_Fall2025/ShinyApp/breast_nodes_communities.csv", breastGeneNames, breastClusterMap)
 
 	if err3 != nil {
 		panic(err3)
 	}
 
-	err4 := WriteEdgesCSV("/Users/bethany/ProgrammingProject/ShinyApp/breast_edges.csv", BreastGraph)
+	err4 := WriteEdgesCSV("/02-601_Project_Fall2025/ShinyApp/breast_edges.csv", BreastGraph)
 
 	if err4 != nil {
 		panic(err4)
@@ -311,13 +311,13 @@ func main() {
 
 	fmt.Println("Writing ovarian cancer gene network and community assignments to CSV files...")
 
-	err5 := WriteCommunitiesCSV("/Users/bethany/ProgrammingProject/ShinyApp/ovarian_nodes_communities.csv", ovarianGeneNames, ovarianClusterMap)
+	err5 := WriteCommunitiesCSV("/02-601_Project_Fall2025/ShinyApp/ovarian_nodes_communities.csv", ovarianGeneNames, ovarianClusterMap)
 
 	if err5 != nil {
 		panic(err5)
 	}
 
-	err6 := WriteEdgesCSV("/Users/bethany/ProgrammingProject/ShinyApp/ovarian_edges.csv", OvarianGraph)
+	err6 := WriteEdgesCSV("/02-601_Project_Fall2025/ShinyApp/ovarian_edges.csv", OvarianGraph)
 
 	if err6 != nil {
 		panic(err6)
