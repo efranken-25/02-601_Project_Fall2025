@@ -15,7 +15,7 @@ what application does, why we used the technologies, challenges we faced and fea
 
 
 # Include Credits
-Beth Vazquez Smith 
-Noemi Banda
-Emma Franken
+-Beth Vazquez Smith 
+-Noemi Banda
+-Emma Franken
 
