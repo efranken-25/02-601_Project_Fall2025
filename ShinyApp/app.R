@@ -14,11 +14,15 @@ if (!requireNamespace("shinycssloaders", quietly = TRUE)) {
   install.packages("shinycssloaders")
 }
 
+if (!requireNamespace("here", quietly = TRUE)) {
+  install.packages("here")
+}
+
 library(shiny)
 library(visNetwork)
 library(colourpicker)
 library(shinycssloaders)
-
+library(here)
 # -------------------------------------------------------------------
 # UI
 # -------------------------------------------------------------------
@@ -142,8 +146,10 @@ server <- function(input, output, session) {
     
     status("Running Go pipeline (this may take ~10–30 seconds)...")
     
-    go_exe   <- "/Users/bethany/ProgrammingProject/ProgrammingProject"
-    base_dir <- "/Users/bethany/ProgrammingProject/ShinyApp"
+    #directory changes per person (depends on where the github repo is downloaded)
+    project_dir <- here()
+    go_exe <- here("02-601_Project_Fall2025")
+    base_dir <- here("ShinyApp")
     
     if (!file.exists(go_exe)) {
       status("Error: Go executable not found.")
