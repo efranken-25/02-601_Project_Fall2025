@@ -42,7 +42,7 @@ what application does, why we used the technologies, challenges we faced and fea
 5. The output CSV files for gene networks and community/module assignments will be saved in the `ShinyApp/` folder. 
 
 ### Running the Shiny App (R)
-1. Open R or RStudio
+1. Open **R** or **RStudio**
 2. Make sure you have the required packages installed:
     `install.packages(c("shiny", "visNetwork", "colourpicker", "shinycssloaders", "here"))`
 3. Set your working directory to the project folder (so that the Shiny app can access the CSVs):
