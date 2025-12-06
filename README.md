@@ -51,6 +51,11 @@ what application does, why we used the technologies, challenges we faced and fea
     `shiny::runApp()`
 5. The app will open in your web browser and display the interactive gene network visualizations. 
 
+## Features
+
+
+
+
 # Include Credits
 * Beth Vazquez Smith 
 * Noemi Banda
