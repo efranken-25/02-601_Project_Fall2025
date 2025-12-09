@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"encoding/csv"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -216,6 +218,115 @@ func WriteCommunitiesCSV(filename string, breastGeneNames []string, communities 
 			gene,                 // id (used by visNetwork internally)
 			gene,                 // label (what you see)
 			strconv.Itoa(commID), // community (cluster ID)
+		}
+
+		if err := w.Write(record); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// *ChatGPT generated*
+// WriteCommunityStatsCSV writes per-community statistics to a CSV file.
+// Columns: community_id, num_nodes, num_edges, density
+func WriteCommunityStatsCSV(
+	filename string,
+	moduleSizes map[int]int,
+	moduleEdges map[int]int,
+	moduleDensities map[int]float64,
+) error {
+
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	w := csv.NewWriter(f)
+	defer w.Flush()
+
+	// header
+	if err := w.Write([]string{"community_id", "num_nodes", "num_edges", "density"}); err != nil {
+		return err
+	}
+
+	// sort community IDs for deterministic output
+	keys := make([]int, 0, len(moduleSizes))
+	for k := range moduleSizes {
+		keys = append(keys, k)
+	}
+	sort.Ints(keys)
+
+	for _, commID := range keys {
+		nNodes := moduleSizes[commID]
+		nEdges := moduleEdges[commID]
+		dens := moduleDensities[commID]
+
+		record := []string{
+			strconv.Itoa(commID),
+			strconv.Itoa(nNodes),
+			strconv.Itoa(nEdges),
+			strconv.FormatFloat(dens, 'f', 6, 64),
+		}
+		if err := w.Write(record); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// *ChatGPT*
+// WriteNodeStatsCSV writes per-node statistics to a CSV file.
+// Columns: node_id, gene_name, community_id, degree, clustering
+func WriteNodeStatsCSV(
+	filename string,
+	geneNames []string,
+	clusterMap map[int]int,
+	degrees []float64,
+	clusteringCoeffs []float64,
+) error {
+
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	w := csv.NewWriter(f)
+	defer w.Flush()
+
+	// header
+	if err := w.Write([]string{"node_id", "gene_name", "community_id", "degree", "clustering"}); err != nil {
+		return err
+	}
+
+	n := len(geneNames)
+	for i := 0; i < n; i++ {
+		commID, ok := clusterMap[i]
+		if !ok {
+			// if for some reason this node isn't in the clusterMap, skip it
+			continue
+		}
+
+		deg := 0.0
+		if i < len(degrees) {
+			deg = degrees[i]
+		}
+
+		c := math.NaN()
+		if i < len(clusteringCoeffs) {
+			c = clusteringCoeffs[i]
+		}
+
+		record := []string{
+			strconv.Itoa(i),                      // node_id
+			geneNames[i],                         // gene_name
+			strconv.Itoa(commID),                 // community_id
+			strconv.FormatFloat(deg, 'f', 6, 64), // degree
+			strconv.FormatFloat(c, 'f', 6, 64),   // clustering
 		}
 
 		if err := w.Write(record); err != nil {

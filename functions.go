@@ -8,14 +8,13 @@ import (
 	"sort"
 	"strconv"
 
-	fisher "github.com/glycerine/golang-fisher-exact"
 	"golang.org/x/exp/stats"
 	"gonum.org/v1/gonum/stat"
 )
 
 // Function TransformMapToSlice takes a map's outerkey (geneName) and the map its in as input
 // and returns a slice corresponding to the float64 tpm values for each of the samples for that gene
-func TransformMapToSlice(geneName string, geneExpressionBreastMap ExpressionMap) []float64 {
+func TransformMapToSlice(geneName string, geneExpressionBreastMap map[string]map[string]float64) []float64 {
 	//initialize an empty slice to for a geneName, the float64 values are the tpm values for each of the samples
 	geneNameslice := make([]float64, 0)
 
@@ -36,7 +35,7 @@ func TransformMapToSlice(geneName string, geneExpressionBreastMap ExpressionMap)
 // Store all of the sample names from the Data
 // Function GetSampleNames takes a map[string]map[string]float64 as input and grabs the inner string key corresponding to the
 // sample names and returns it as a slice of sample names
-func GetSampleNames(geneExpressionBreastMap ExpressionMap) []string {
+func GetSampleNames(geneExpressionBreastMap map[string]map[string]float64) []string {
 
 	samples := make([]string, 0)
 
@@ -61,7 +60,7 @@ func GetSampleNames(geneExpressionBreastMap ExpressionMap) []string {
 // Store all of the gene names from the Data
 // Function GetGeneNames takes a map[string]map[string]float64 as input and grabs the outer string key corresponding to the
 // gene names and returns it as a sorted slice of gene names
-func GetGeneNames(geneExpressionBreastMap ExpressionMap) []string {
+func GetGeneNames(geneExpressionBreastMap map[string]map[string]float64) []string {
 
 	//initialize list to store geneNames
 	geneNames := make([]string, 0)
@@ -81,7 +80,7 @@ func GetGeneNames(geneExpressionBreastMap ExpressionMap) []string {
 // Step 1: Find/confirm number of samples for each gene (21 samples)
 // Step 2: For each gene, Calculate the mean of the tpm values across its samples and then,
 // Step 3: If the mean of that gene's tpm values is <=10 then remove the gene from further analyses
-func MeanBasedFilter(geneExpressionBreastMap ExpressionMap, samples []string, meanThresh float64) ExpressionMap {
+func MeanBasedFilter(geneExpressionBreastMap map[string]map[string]float64, samples []string, meanThresh float64) map[string]map[string]float64 {
 
 	//initialize a nested map for return corresponding to the input map filtered for only genes with a mean tpm greater than 10.0
 	out := make(map[string]map[string]float64, len(geneExpressionBreastMap))
@@ -127,7 +126,7 @@ func sortSampleNames(samples []string) {
 // Function ComputePearsonCorrelation takes as input a sorted list of gene names and sample names, as well as a nested filtered map
 // of map[genenames]map[samplenames]TPMValues and it computes the Pearson Correlation between each pair of genes across samples
 // it returns a 2D matrix of pearson coeff values ([][]float64) with row and column indices corresponding to indices of genes found in sortedGeneNames list
-func ComputePearsonCorrelation(sortedGeneNames, sortedSampleNames []string, filteredGeneExpressionBreastMap ExpressionMap) CorrelationMatrix {
+func ComputePearsonCorrelation(sortedGeneNames, sortedSampleNames []string, filteredGeneExpressionBreastMap map[string]map[string]float64) [][]float64 {
 
 	//initialize a square matrix for return
 	n := len(sortedGeneNames)
@@ -192,7 +191,7 @@ func ComputePearsonCorrelation(sortedGeneNames, sortedSampleNames []string, filt
 
 // Function TransformMatrixToSlice takes a symmetrical square matrix as input and flattens
 // it into a single slice of float64 values for return.
-func TransformMatrixToSlice(BreastPearsonCorrelationMatrix CorrelationMatrix) []float64 {
+func TransformMatrixToSlice(BreastPearsonCorrelationMatrix [][]float64) []float64 {
 	quantileSlice := make([]float64, 0)
 
 	numRows := len(BreastPearsonCorrelationMatrix)
@@ -358,7 +357,7 @@ func CountCommunities(communityMap map[int]int) int {
 
 // Analyzing the graph networks
 
-// Function CalculateNumEdges takes a graph as input and calculates the total number of edges in the graph
+// Function CalculateNumEdges takes a graph network as input and calculates the total number of edges in the graph for return
 func CalculateNumEdges(BreastGraph GraphNetwork) int {
 	count := 0
 	for _, node := range BreastGraph {
@@ -382,6 +381,45 @@ func CalculateNumEdges(BreastGraph GraphNetwork) int {
 	return count
 }
 
+// Function ComputeModuleEdgeCounts takes a graph network and a clusterMap[nodeID]communityID as input
+// and returns a map[communityID]numEdges counting only edges whose
+// both endpoints lie in the same community
+func ComputeModuleEdgeCounts(graph GraphNetwork, clusterMap map[int]int) map[int]int {
+	//initialize the map of communities to its number of edges
+	moduleEdges := make(map[int]int)
+
+	//range over the graph network
+	for _, node := range graph {
+		//get the source node ID and its community assignment
+		fromID := node.ID
+		commFrom := clusterMap[fromID]
+
+		//range over all edges from this node
+		for _, edge := range node.Edges {
+			//get the target node ID and its community assignment
+			toID := edge.To.ID
+			commTo := clusterMap[toID]
+
+			// Only count edges fully inside one community (intra-community edges)
+			if commFrom != commTo {
+				continue //skip inter-community edges
+			}
+
+			// For undirected graph: only count smaller to larger once to avoid double counting
+			if fromID >= toID {
+				continue
+			}
+
+			//only count edges with non-zero weight
+			if edge.Weight != 0 {
+				moduleEdges[commFrom]++ //increment edge count for this community
+			}
+		}
+	}
+
+	return moduleEdges
+}
+
 // Function ComputeAverageDegree takes as input total number of edges and total number of nodes in a graph,
 // computes the average degree of a graph network with Average Degree = (2 * Total Edges) / Total Nodes
 // and outputs the average degree of a graph
@@ -396,7 +434,33 @@ func ComputeEdgeDensity(numEdges, numNodes int) float64 {
 	return 2.0 * float64(numEdges) / (float64(numNodes) * float64(numNodes-1))
 }
 
-// Function EdgeStats computes the number of positively and negatively correlated edges in the graph input
+// Function ComputeModuleDensities takes a map of community to node count and map of community to edge count as inputs
+// and returns a map of community to its edge density
+func ComputeModuleDensities(moduleSizes map[int]int, moduleEdges map[int]int) map[int]float64 {
+
+	//initialize the map for storing community densities for return
+	moduleDensities := make(map[int]float64, len(moduleSizes))
+
+	//range over the module sizes map to compute density for each community
+	for communityID, numNodes := range moduleSizes {
+		//get the number of edges for this community from the module edges map
+		numEdges := moduleEdges[communityID]
+
+		//only compute density if the module has more than one node and has edges
+		if numNodes > 1 && numEdges > 0 {
+			//compute edge density using the existing ComputeEdgeDensity function
+			moduleDensities[communityID] = ComputeEdgeDensity(numEdges, numNodes)
+		} else {
+			// For singleton modules (1 node) or edgeless modules, density is 0
+			moduleDensities[communityID] = 0.0
+		}
+	}
+
+	return moduleDensities
+}
+
+// Function EdgeStats takes a graph network as input and computes the number of positively and negatively
+// correlated edges in the graph (output)
 func EdgeStats(graph GraphNetwork) (pos, neg int) {
 	for _, node := range graph {
 		fromID := node.ID
@@ -551,6 +615,29 @@ func InvertMapWithGeneNames(clusterMap map[int]int, geneNames []string) map[int]
 	return moduleMap
 }
 
+// Function MapIntValuesToFloatSlice converts a map[int]int (input)
+// into a []float64 of just the values (output)
+func MapIntValuesToFloatSlice(m map[int]int) []float64 {
+	out := make([]float64, 0, len(m))
+	//range over the map keys and extract the values to append to growing slice
+	for _, v := range m {
+		out = append(out, float64(v))
+	}
+	return out
+}
+
+// Function MapFloatValuesToSlice converts a map[int]float64 (input)
+// into a []float64 of just the values (output)
+func MapFloatValuesToSlice(m map[int]float64) []float64 {
+	out := make([]float64, 0, len(m))
+	//range over the map keys and extract the values to append to growing slice
+	for _, v := range m {
+		out = append(out, v)
+	}
+	return out
+}
+
+/*
 // Function CountOverlap takes as input 2 lists of genes corresponding to 2 different modules from different cancer types
 // and returns the number of overlapping genes (intersection count) between the two lists
 func CountOverlap(a, b []string) int {
@@ -760,7 +847,7 @@ func ExtractPairsAboveJaccardThreshold(jaccardMatrix [][]float64, breastModuleID
 	}
 	return topMatches
 }
-
+*/
 // Function TotalNumGenes takes as input lists of breast and ovarian gene names in the dataset and returns a count of
 // the number of genes in the union of both sets.
 func TotalNumGenes(breastGeneNames, ovarianGeneNames []string) int {
@@ -778,6 +865,7 @@ func TotalNumGenes(breastGeneNames, ovarianGeneNames []string) int {
 	return len(geneUniverse)
 }
 
+/*
 // *ChatGPT generated*
 // BuildOverlapTables takes the significant module pairs and builds full
 // contingency tables + metadata for each pair.
@@ -900,7 +988,7 @@ func benjaminiHochberg(p []float64) []float64 {
 
 	return q
 }
-
+*/
 // Function LocalClusteringCoeff takes a graph network as input, computes the clustering coefficient of each node (gene) with the formula:
 // Ci = 2ni/ki(ki-1), where ni is the number of observed links connecting the ki neighbors of node i and ki(ki-1)/2
 // is the total number of possible links. The function returns a slice of local clustering coefficients for the
@@ -945,6 +1033,20 @@ func LocalClusteringCoeff(graph GraphNetwork) []float64 {
 	return clusteringCoeffs
 }
 
+// Function FilterNaNs takes a slice of floats as input and returns a new slice
+// with all NaN values removed.
+func FilterNaNs(vals []float64) []float64 {
+	out := make([]float64, 0, len(vals))
+	//range through the input
+	for _, v := range vals {
+		//if it is not NaN then go ahead and input it into the out slice
+		if !math.IsNaN(v) {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
 // Function GlobalClusteringCoeff takes as input a list of local clustering coefficients and computes
 // the mean of these values for all nodes with at least two neighbors. This outputs a global measure
 // of how “clustered” the whole network is.
@@ -963,3 +1065,72 @@ func GlobalClusteringCoeff(clusteringCoeffs []float64) float64 {
 	//compute the average
 	return sum / float64(nonNaNCount)
 }
+
+// Function ComputeDegrees takes a graph network structure as input and computes for each node in the graph its
+// degree = its number of connected edges. It returns a slice containing a list of these values (# of degrees) for each node in the graph.
+func ComputeDegrees(graph GraphNetwork) []float64 {
+	degree := make([]float64, len(graph))
+	//range over the graph network
+	for i := range graph {
+		//grab the count of its neighbors
+		//and input the node's degree count in the slice storing all degrees for the graph network
+		degree[i] = float64(len(graph[i].Edges))
+	}
+	return degree
+}
+
+// Function MeanStd computes the mean and standard deviation (output) of a slice of float64 values (input)
+func MeanStd(vals []float64) (mean float64, sd float64) {
+	//find the number of total values
+	n := float64(len(vals))
+	sum := 0.0
+	//sum the values
+	for _, v := range vals {
+		sum = sum + v
+	}
+	//divide by the number of values to compute the mean
+	mean = sum / n
+
+	// compute variance = Sum of each (datapoint - mean)^2
+	varSum := 0.0
+
+	for _, v := range vals {
+		varSum += (v - mean) * (v - mean)
+	}
+	//population standard deviation = variance sum / number of datapoints
+	sd = math.Sqrt(varSum / n)
+	//return mean and standard deviation
+	return mean, sd
+}
+
+/*
+// IdentifyHubsByWeightedDegree identifies hub genes in a graph based on weighted degree. It takes as input a
+// graph network struct, #standard of deviations to calculate significance from the mean and outputs a list of
+// gene names, the mean, and standard deviation used for the statistical test.
+func IdentifyHubsByWeightedDegree(graph GraphNetwork, zThreshold float64) ([]string, float64, float64) {
+	// 1) Weighted degrees
+	weightedDegrees := ComputeWeightedDegrees(graph)
+
+	// 2) Find the mean and standard deviation
+	mean, sd := MeanStd(weightedDegrees)
+
+	// Edge case: if sd == 0, all nodes have same degree then there are no hubs in this case
+	if sd == 0 {
+		return nil, mean, sd
+	}
+
+	// 3) Find hubs: z >= zThreshold
+	hubGenes := make([]string, 0)
+
+	for i, wd := range weightedDegrees {
+		//Compute z-score for each node: z = (wd - mean) / sd.
+		z := (wd - mean) / sd
+		if z >= zThreshold {
+			// get gene name from graph node
+			hubGenes = append(hubGenes, graph[i].GeneName)
+		}
+	}
+
+	return hubGenes, mean, sd
+}
+*/
