@@ -25,10 +25,10 @@ Integrating Go with R Shiny enables CPU-efficient backend processing while provi
 
 ## Challenges We Faced
 * Determining how to compare networks:
-    -Comparing co-expression networks requires identifying which metrics are meaningful across datasets, since some statistics are designed to characterize a single network and are more biologically interpretable at that level. These include metrics such as module structure, network diameter, and centrality measures. In contrast, other metrics are more suitable for directly comparing two networks, such as differences in degree distributions, overall topology, density, or edge sign proportions. Selecting appropriate comparison strategies, and ensuring they were calculated consistently, was a major challenge.
+    - Comparing co-expression networks requires identifying which metrics are meaningful across datasets, since some statistics are designed to characterize a single network and are more biologically interpretable at that level. These include metrics such as module structure, network diameter, and centrality measures. In contrast, other metrics are more suitable for directly comparing two networks, such as differences in degree distributions, overall topology, density, or edge sign proportions. Selecting appropriate comparison strategies, and ensuring they were calculated consistently, was a major challenge.
 
 * Handling large, high-dimensional data:
-    -RNA-Seq correlation matrices include thousands of genes, resulting in millions of pairwise comparisons. Efficiently computing and filtering these correlations, managing memory usage, and ensuring rapid data transfer between Go and Shiny required careful tuning.
+    - RNA-Seq correlation matrices include thousands of genes, resulting in millions of pairwise comparisons. Efficiently computing and filtering these correlations, managing memory usage, and ensuring rapid data transfer between Go and Shiny required careful tuning.
 
 ## Potential Future Features
 * Module-level enrichment analysis
