@@ -58,7 +58,7 @@ what application does, why we used the technologies, challenges we faced and fea
 
 
 ## Authors
-* **Beth Vazquez Smith** - [@bvazquezsmith](https://github.com/bvazquezsmith) - Code development and Shiny app design
-* **Noemi Banda** - [@b-noemi](https://github.com/b-noemi) - Research and project planning
-* **Emma Franken** - [@efranken-25](https://github.com/efranken-25) - Github maintenance, testing code, data acquisition
+* **Beth Vazquez Smith** - [@bvazquezsmith](https://github.com/bvazquezsmith)
+* **Noemi Banda** - [@b-noemi](https://github.com/b-noemi)
+* **Emma Franken** - [@efranken-25](https://github.com/efranken-25)
 
