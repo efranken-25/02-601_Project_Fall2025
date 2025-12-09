@@ -12,7 +12,7 @@
 
 
 ## Project Overview 
-Our application takes Gene Expression Quantification RNA-Seq data and creates an interactive and customizable co-expression network that allows the user to explore modules, while adjusting degree density, visibility of positive or negative edges, color schemes, and exporting figures. Users can analyze a single network or directly compare two datasets (in our case, cancer types) side-by-side to asses differences in co-expression topology and structure. Alongside this, it will calculate the global network statistics, such as clustering coefficients and degree distribution, to assess overall co-expression structure between cancer types.
+Our application takes Gene Expression Quantification RNA-Seq data and creates an interactive and customizable co-expression network that allows the user to explore modules, while adjusting degree density, visibility of positive or negative edges, color schemes, and exporting figures. Users can analyze a single network or directly compare two datasets (in our case, cancer types) side-by-side to asses differences in co-expression structure and topology. Alongside this, it will calculate the global network statistics, such as clustering coefficients and degree distribution, to assess overall co-expression structure between cancer types.
 
 ## Why We Used These Technologies
 Go was chosen for the backend analysis because of its strong performance, concurrency model, and clean support for object-oriented principles such as modularization and method-based struct organization. These features make it easier to structure complex biological workflows while maintaining readable, maintainable code.
@@ -79,6 +79,8 @@ Integrating Go with R Shiny enables CPU-efficient backend processing while provi
 5. The app will open in your web browser and display the interactive gene network visualizations. 
 
 ## Features
+
+
 
 
 
