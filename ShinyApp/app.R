@@ -1,5 +1,3 @@
-# app.R
-
 # Install packages if needed
 if (!requireNamespace("shiny", quietly = TRUE)) {
   install.packages("shiny")
@@ -13,7 +11,6 @@ if (!requireNamespace("colourpicker", quietly = TRUE)) {
 if (!requireNamespace("shinycssloaders", quietly = TRUE)) {
   install.packages("shinycssloaders")
 }
-
 if (!requireNamespace("here", quietly = TRUE)) {
   install.packages("here")
 }
@@ -23,19 +20,52 @@ library(visNetwork)
 library(colourpicker)
 library(shinycssloaders)
 library(here)
+
 # -------------------------------------------------------------------
 # UI
 # -------------------------------------------------------------------
 
 ui <- fluidPage(
-  titlePanel(
-    div(
-      style = "text-align: left;",
-      tags$h2("Gene Coexpression Network Explorer"),
-      tags$h5(
-        style = "color:#666; margin-top:-5px;",
-        "Powered by Louvain Community Detection"
-      )
+  tags$head(
+    tags$style(HTML("
+      /* Style the visNetwork container + add PNG watermark */
+      #network {
+        position: relative;
+        background-color: rgba(255,255,255,0.9);
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+
+        /* PNG watermark inside the panel */
+        background-image: url('watermark.png');
+        background-repeat: no-repeat;
+        background-position: bottom right;   /* bottom-right corner */
+        background-size: 180px auto;         /* tweak this size */
+      }
+    "))
+  ),
+  
+  # Title + subtitle + centered-under-title image
+  div(
+    style = "text-align: left; margin-left: 20px;",
+    
+    # Title
+    tags$h2("Gene Co-expression Network Explorer"),
+    
+    # Subtitle
+    tags$h5(
+      style = "color:#666; margin-top:-5px;",
+      "Powered by Louvain Community Detection"
+    ),
+    
+    # Watermark image placed under subtitle
+    tags$img(
+      src = "watermark.png",
+      style = "
+        display: block;
+        margin-top: 10px;
+        margin-left: 90px;   /* shift left or right */
+        width: 150px;        /* shrink size here */
+      "
     )
   ),
   
@@ -62,14 +92,14 @@ ui <- fluidPage(
       selectInput(
         "dataset",
         label   = NULL,
-        choices = c("Breast" = "breast", "Ovarian" = "ovarian"),
-        selected = "breast"
+        choices = c("Dataset 1" = "dataset1", "Dataset 2" = "dataset2"),
+        selected = "dataset1"
       ),
       
       tags$hr(),
       
       # Edge sign section
-      h4("Edge sign to include"),
+      h4("Select edges (positive or negative"),
       checkboxInput("edge_pos", "Positive (r > 0)", value = TRUE),
       checkboxInput("edge_neg", "Negative (r < 0)", value = TRUE),
       
@@ -94,30 +124,21 @@ ui <- fluidPage(
         value = FALSE   # default OFF to avoid rainbow explosion
       ),
       
+      h4("Community Selection"),
+      
+      tags$small(
+        style = "color:#666;",
+        "The dropdown lists communities in descending order of density (most dense → least dense)."
+      ),
+      
       selectInput(
         "community",
-        "Focus on one community (optional):",
+        label = NULL,
         choices = "All",
         selected = "All"
       ),
       
-      sliderInput(
-        "top_hubs",
-        "Show only top N hub genes in current view (0 = show all):",
-        min = 0, max = 2000, value = 0, step = 50
-      ),
-      
       checkboxInput("show_labels", "Show gene labels", TRUE),
-      
-      tags$hr(),
-      
-      # Edge limit
-      h4("Edge limit"),
-      sliderInput(
-        "max_edges",
-        "Maximum edges to plot:",
-        min = 1000, max = 50000, value = 20000, step = 1000
-      )
     ),
     
     mainPanel(
@@ -146,95 +167,145 @@ server <- function(input, output, session) {
     
     status("Running Go pipeline (this may take ~10–30 seconds)...")
     
-    #directory changes per person (depends on where the github repo is downloaded)
-    project_dir <- here()
-    go_exe <- here("02-601_Project_Fall2025")
-    base_dir <- here("ShinyApp")
+    # here() points to ShinyApp (where app.R lives)
+    base_dir <- here()  # /Users/bethany/ProgrammingProject/ShinyApp
     
-    if (!file.exists(go_exe)) {
-      status("Error: Go executable not found.")
-      validate(need(FALSE, "Go executable not found."))
+    # Project root (contains ProgrammingProject binary + ShinyApp/)
+    project_dir <- dirname(base_dir)  # /Users/bethany/ProgrammingProject
+    
+    # Go executable in the project root
+    go_exe <- file.path(project_dir, "ProgrammingProject")
+    
+    message("DEBUG: project_dir = ", project_dir)
+    message("DEBUG: go_exe      = ", go_exe)
+    message("DEBUG: base_dir    = ", base_dir)
+    message("DEBUG: getwd() BEFORE running Go = ", getwd())
+    
+    if (!file.exists(go_exe) || file.info(go_exe)$isdir) {
+      status(paste("Error: Go executable not found at:", go_exe))
+      validate(need(FALSE, paste("Go executable not found at:", go_exe)))
     }
     
-    # Run Go
-    cmd_out <- NULL
+    # Run Go from the project root so its relative paths work
     status("Running Go pipeline: executing program...")
+    old_wd <- getwd()
+    cmd_out <- NULL
+    
     run_err <- tryCatch({
-      cmd_out <- system2(go_exe, stdout = TRUE, stderr = TRUE)
+      setwd(project_dir)
+      message("DEBUG: getwd() INSIDE Go run = ", getwd())
+      cmd_out <- system2(
+        go_exe,
+        stdout = TRUE,
+        stderr = TRUE
+      )
       NULL
     }, error = function(e) e)
+    
+    setwd(old_wd)
+    message("DEBUG: getwd() AFTER running Go = ", getwd())
     
     if (inherits(run_err, "error")) {
       status(paste("Error running Go pipeline:", run_err$message))
       validate(need(FALSE, "Go pipeline failed. See R console for details."))
     }
     
-    message("Go output:")
-    message(paste(cmd_out, collapse = "\n"))
+    message("===== RAW GO OUTPUT =====")
+    if (length(cmd_out) > 0) {
+      message(paste(cmd_out, collapse = "\n"))
+    } else {
+      message("(no stdout/stderr from Go)")
+    }
+    message("===== END GO OUTPUT =====")
     
-    # CSV paths
-    breast_nodes_path  <- file.path(base_dir, "breast_nodes_communities.csv")
-    breast_edges_path  <- file.path(base_dir, "breast_edges.csv")
-    ovarian_nodes_path <- file.path(base_dir, "ovarian_nodes_communities.csv")
-    ovarian_edges_path <- file.path(base_dir, "ovarian_edges.csv")
+    # Check Go exit status if present
+    exit_status <- attr(cmd_out, "status")
+    if (!is.null(exit_status) && exit_status != 0) {
+      status(paste("Go pipeline failed with exit status", exit_status, "- see R console for details."))
+      validate(need(FALSE, paste("Go pipeline failed (status", exit_status, "). Check R console for Go error output.")))
+    }
+    
+    # Before checking files, show what's in ShinyApp
+    message("===== FILES IN base_dir (ShinyApp) =====")
+    message(paste(list.files(base_dir), collapse = ", "))
+    message("===== END FILE LIST =====")
+    
+    # CSV paths – must match Go's dataset1/dataset2 filenames
+    dataset1_nodes_path <- file.path(base_dir, "dataset1_nodes_communities.csv")
+    dataset1_edges_path <- file.path(base_dir, "dataset1_edges.csv")
+    dataset2_nodes_path <- file.path(base_dir, "dataset2_nodes_communities.csv")
+    dataset2_edges_path <- file.path(base_dir, "dataset2_edges.csv")
     
     status("Running Go pipeline: loading CSV outputs...")
     
-    if (!file.exists(breast_nodes_path) ||
-        !file.exists(breast_edges_path) ||
-        !file.exists(ovarian_nodes_path) ||
-        !file.exists(ovarian_edges_path)) {
+    if (!file.exists(dataset1_nodes_path) ||
+        !file.exists(dataset1_edges_path) ||
+        !file.exists(dataset2_nodes_path) ||
+        !file.exists(dataset2_edges_path)) {
       
-      status("Error: One or more CSV files not found. Check Go output paths.")
-      validate(need(FALSE, "Required CSV files are missing."))
+      status("Error: One or more CSV files not found. Check Go output paths and filenames.")
+      validate(need(FALSE, "Required CSV files are missing. See R console for file listing."))
     }
     
     # Read CSVs
-    breast_nodes  <- read.csv(breast_nodes_path, stringsAsFactors = FALSE)
-    breast_edges  <- read.csv(breast_edges_path, stringsAsFactors = FALSE)
-    ovarian_nodes <- read.csv(ovarian_nodes_path, stringsAsFactors = FALSE)
-    ovarian_edges <- read.csv(ovarian_edges_path, stringsAsFactors = FALSE)
+    dataset1_nodes <- read.csv(dataset1_nodes_path, stringsAsFactors = FALSE)
+    dataset1_edges <- read.csv(dataset1_edges_path, stringsAsFactors = FALSE)
+    dataset2_nodes <- read.csv(dataset2_nodes_path, stringsAsFactors = FALSE)
+    dataset2_edges <- read.csv(dataset2_edges_path, stringsAsFactors = FALSE)
     
-    message("breast_nodes:  ", nrow(breast_nodes),  " rows")
-    message("breast_edges:  ", nrow(breast_edges),  " rows")
-    message("ovarian_nodes: ", nrow(ovarian_nodes), " rows")
-    message("ovarian_edges: ", nrow(ovarian_edges), " rows")
+    message("dataset1_nodes: ", nrow(dataset1_nodes), " rows")
+    message("dataset1_edges: ", nrow(dataset1_edges), " rows")
+    message("dataset2_nodes: ", nrow(dataset2_nodes), " rows")
+    message("dataset2_edges: ", nrow(dataset2_edges), " rows")
+    
+    dataset1_stats_path <- file.path(base_dir, "dataset1_community_stats.csv")
+    dataset2_stats_path <- file.path(base_dir, "dataset2_community_stats.csv")
+    
+    if (!file.exists(dataset1_stats_path) || !file.exists(dataset2_stats_path)) {
+      status("Error: Community stats CSV files not found. Check Go output paths.")
+      validate(need(FALSE, "Missing community stats CSVs. See R console for file listing."))
+    }
+    
+    dataset1_stats <- read.csv(dataset1_stats_path, stringsAsFactors = FALSE)
+    dataset2_stats <- read.csv(dataset2_stats_path, stringsAsFactors = FALSE)
     
     # Make IDs/labels character
-    breast_nodes$id    <- as.character(breast_nodes$id)
-    breast_nodes$label <- as.character(breast_nodes$label)
-    ovarian_nodes$id    <- as.character(ovarian_nodes$id)
-    ovarian_nodes$label <- as.character(ovarian_nodes$label)
+    dataset1_nodes$id    <- as.character(dataset1_nodes$id)
+    dataset1_nodes$label <- as.character(dataset1_nodes$label)
+    dataset2_nodes$id    <- as.character(dataset2_nodes$id)
+    dataset2_nodes$label <- as.character(dataset2_nodes$label)
     
     # Edge endpoints as character
-    breast_edges$from <- as.character(breast_edges$from)
-    breast_edges$to   <- as.character(breast_edges$to)
-    ovarian_edges$from <- as.character(ovarian_edges$from)
-    ovarian_edges$to   <- as.character(ovarian_edges$to)
+    dataset1_edges$from <- as.character(dataset1_edges$from)
+    dataset1_edges$to   <- as.character(dataset1_edges$to)
+    dataset2_edges$from <- as.character(dataset2_edges$from)
+    dataset2_edges$to   <- as.character(dataset2_edges$to)
     
     # Check for weight column
-    if (!"weight" %in% names(breast_edges) ||
-        !"weight" %in% names(ovarian_edges)) {
+    if (!"weight" %in% names(dataset1_edges) ||
+        !"weight" %in% names(dataset2_edges)) {
       status("Error: edges CSV must contain a 'weight' column.")
       validate(need(FALSE, "Missing 'weight' column in edges CSV."))
     }
     
     # Communities for dropdown
-    breast_comm  <- sort(unique(breast_nodes$community))
-    ovarian_comm <- sort(unique(ovarian_nodes$community))
+    dataset1_comm <- sort(unique(dataset1_nodes$community))
+    dataset2_comm <- sort(unique(dataset2_nodes$community))
     
     status("Finished Go pipeline. Ready to render network.")
     
     list(
-      breast = list(
-        nodes = breast_nodes,
-        edges = breast_edges,
-        communities = breast_comm
+      dataset1 = list(
+        nodes       = dataset1_nodes,
+        edges       = dataset1_edges,
+        communities = dataset1_comm,
+        comm_stats  = dataset1_stats
       ),
-      ovarian = list(
-        nodes = ovarian_nodes,
-        edges = ovarian_edges,
-        communities = ovarian_comm
+      dataset2 = list(
+        nodes       = dataset2_nodes,
+        edges       = dataset2_edges,
+        communities = dataset2_comm,
+        comm_stats  = dataset2_stats
       )
     )
   })
@@ -245,9 +316,36 @@ server <- function(input, output, session) {
     dat_all <- graph_data()
     req(dat_all)
     
-    current <- input$dataset
-    comms   <- dat_all[[current]]$communities
-    choices <- c("All", as.character(comms))
+    current <- input$dataset   # "dataset1" or "dataset2"
+    dat     <- dat_all[[current]]
+    nodes   <- dat$nodes
+    stats   <- dat$comm_stats
+    
+    # possible communities from the nodes
+    comms <- sort(unique(nodes$community))
+    
+    # subset stats to only those communities present
+    stats <- stats[stats$community_id %in% comms, , drop = FALSE]
+    
+    if (nrow(stats) == 0) {
+      # fallback: no stats, just "All"
+      choices <- c("All" = "All")
+    } else {
+      # sort communities by density (highest first) so densest are at the top
+      stats <- stats[order(-stats$density), , drop = FALSE]
+      
+      # values are community IDs (as strings); labels show ID, size, density
+      values <- as.character(stats$community_id)
+      labels <- sprintf(
+        "Community %d (n = %d, dens = %.3f)",
+        stats$community_id,
+        stats$num_nodes,
+        stats$density
+      )
+      named_choices <- stats::setNames(values, labels)
+      
+      choices <- c("All" = "All", named_choices)
+    }
     
     updateSelectInput(
       session,
@@ -291,12 +389,7 @@ server <- function(input, output, session) {
       validate(need(FALSE, "No edges left after filtering by sign."))
     }
     
-    # 3) cap number of edges by strongest |weight|
-    if (!is.null(input$max_edges) && nrow(edges) > input$max_edges) {
-      edges <- edges[order(-abs(edges$weight)), ][1:input$max_edges, , drop = FALSE]
-    }
-    
-    # 4) community filter
+    # 3) community filter
     comm_choice <- input$community
     if (!is.null(comm_choice) && comm_choice != "All") {
       status(paste0("Rendering network for community ", comm_choice, "…"))
@@ -306,7 +399,7 @@ server <- function(input, output, session) {
       edges <- edges[edges$from %in% used_ids & edges$to %in% used_ids, , drop = FALSE]
     }
     
-    # 5) drop nodes not in any edge
+    # 4) drop nodes not in any edge
     used_ids <- unique(c(edges$from, edges$to))
     nodes    <- nodes[nodes$id %in% used_ids, , drop = FALSE]
     if (nrow(nodes) == 0 || nrow(edges) == 0) {
@@ -314,42 +407,26 @@ server <- function(input, output, session) {
       validate(need(FALSE, "No nodes/edges left after filtering."))
     }
     
-    # 6) hub filter
-    top_n <- input$top_hubs
-    if (!is.null(top_n) && top_n > 0) {
-      status(paste0("Focusing on top ", top_n, " hubs in current view…"))
-      deg      <- table(c(edges$from, edges$to))
-      deg      <- sort(deg, decreasing = TRUE)
-      keep_ids <- names(deg)[1:min(top_n, length(deg))]
-      
-      nodes <- nodes[nodes$id %in% keep_ids, , drop = FALSE]
-      edges <- edges[edges$from %in% nodes$id & edges$to %in% nodes$id, , drop = FALSE]
-      if (nrow(nodes) == 0 || nrow(edges) == 0) {
-        status("Top hub filter left no nodes/edges. Try reducing N.")
-        validate(need(FALSE, "No nodes/edges left after hub filtering."))
-      }
-    }
-    
-    # 7) node colouring
+    # 5) node colouring
     if (isTRUE(input$color_nodes_comm)) {
       nodes$group <- as.factor(nodes$community)
     } else {
       nodes$group <- NA
     }
     
-    # 8) edge colouring by sign
+    # 6) edge colouring by sign
     if (isTRUE(input$color_edges_by_sign)) {
       pos_col <- input$pos_color
       neg_col <- input$neg_color
       edges$color <- ifelse(edges$sign == "pos", pos_col, neg_col)
     }
     
-    # 9) hide labels if requested
+    # 7) hide labels if requested
     if (!isTRUE(input$show_labels)) {
       nodes$label <- NA
     }
     
-    # 10) draw with browser physics first, then freeze
+    # 8) draw with browser physics first, then freeze
     net <- visNetwork(nodes, edges) %>%
       visOptions(
         highlightNearest = TRUE,
@@ -359,7 +436,7 @@ server <- function(input, output, session) {
         solver = "barnesHut",
         stabilization = list(
           enabled    = TRUE,
-          iterations = 1500  # how long it tries to find a nice layout
+          iterations = 1500
         )
       ) %>%
       visEvents(
