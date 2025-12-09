@@ -82,7 +82,6 @@ Integrating Go with R Shiny enables CPU-efficient backend processing while provi
 
 
 
-
 ## Authors
 * **Beth Vazquez Smith** - [@bvazquezsmith](https://github.com/bvazquezsmith)
 * **Noemi Banda** - [@b-noemi](https://github.com/b-noemi)

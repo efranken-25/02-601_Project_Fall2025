@@ -3,48 +3,50 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"sort"
+	"strconv"
+)
+
+const (
+	//USER: Label your datasets here.
+	dataset1Label = "Breast Cancer"
+	dataset2Label = "Ovarian Cancer"
+
+	dataset1Path = "GeneExpressionData/Dataset1"
+	dataset2Path = "GeneExpressionData/Dataset2"
+
+	outputDir = "ShinyApp"
 )
 
 func main() {
+	// Parse command-line arguments - simple approach
+	arg := 2 // default to both datasets
+	if len(os.Args) > 1 {
+		if argValue, err := strconv.Atoi(os.Args[1]); err == nil {
+			arg = argValue
+		}
+	}
 
-	//Begin Analyzing Breast Cancer RNA seq gene count Data
+	//Begin Analyzing Dataset1 RNA seq gene count Data
 	// Create a map of maps. Nested map mapping gene_name (string) to sampleID(string) to tpm value
-	geneExpressionBreastMap, err1 := ReadGeneExpressionDirToGeneMap("GeneExpressionData/BreastData")
+	geneExpressionBreastMap, err1 := ReadGeneExpressionDirToGeneMap(dataset1Path)
 
 	// log any errors that may arise from the parsing/ reading in the breast data files
 	if err1 != nil {
 		log.Fatal(err1)
 	}
 
-	fmt.Println("Breast Cancer Gene Expression Data read and map created.")
+	fmt.Printf("%s Gene Expression Data read and map created.\n", dataset1Label)
 
-	//Begin Analyzing Ovarian Cancer RNA seq gene count Data
-	//Create a map of maps. Nested map mapping gene_name (string) to sampleID(string) to tpm value
-	geneExpressionOvarianMap, err2 := ReadGeneExpressionDirToGeneMap("GeneExpressionData/OvarianData")
-
-	// log any errors that may arise from the parsing/ reading in the ovarian data files
-	if err2 != nil {
-		log.Fatal(err2)
-	}
-
-	fmt.Println("Ovarian Cancer Gene Expression Data read and map created.")
-
-	fmt.Println("Printing first line of geneExpressionBreastMap")
+	/*fmt.Println("Printing first line of geneExpressionBreastMap")
 	//Check the format of the data file by printing the first line of our geneExpressionBreastMap
 	for key, val := range geneExpressionBreastMap {
 		fmt.Println(key, val)
 		break
-	}
+	}*/
 
-	fmt.Println("Printing first line of geneExpressionOvarianMap")
-	//Check the format of the data file by printing the first line of our geneExpressionOvarianMap
-	for key, val := range geneExpressionOvarianMap {
-		fmt.Println(key, val)
-		break
-	}
-
-	fmt.Println("Gathering sample names for breast cancer data.")
+	fmt.Printf("Gathering sample names for %s data.\n", dataset1Label)
 	// Store the sample names for the Breast Cancer Data
 	breastSampleNames := GetSampleNames(geneExpressionBreastMap)
 
@@ -52,87 +54,52 @@ func main() {
 	sortSampleNames(breastSampleNames)
 
 	//Print the first few breast sample names to ensure they are sorted by numerical order
-	fmt.Println(breastSampleNames[:5])
-
-	fmt.Println("Gathering sample names for ovarian cancer data.")
-	// Store the sample names for the Ovarian Cancer Data
-	ovarianSampleNames := GetSampleNames(geneExpressionOvarianMap)
-
-	//Sort the ovarian sample names
-	sortSampleNames(ovarianSampleNames)
-
-	//Print the ovarian sample names to ensure they are sorted by numerical order
-	fmt.Println(ovarianSampleNames[:5])
+	//fmt.Println(breastSampleNames[:5])
 
 	fmt.Println("Cleaning Data...Filtering out low expression genes...")
 	// Use Mean-Based Filtering in order to normalize data while maintaining fixed number of samples across each gene
 	filteredGeneExpressionBreastMap := MeanBasedFilter(geneExpressionBreastMap, breastSampleNames, 10.0)
 
-	filteredGeneExpressionOvarianMap := MeanBasedFilter(geneExpressionOvarianMap, ovarianSampleNames, 10.0)
-
-	fmt.Println("Gathering gene names for breast cancer data.")
+	fmt.Printf("Gathering gene names for %s data.\n", dataset1Label)
 	// Store the gene names for the Breast Cancer Data (sorted)
 	breastGeneNames := GetGeneNames(filteredGeneExpressionBreastMap)
 
 	//Print the first few breast gene names to check the names and ensure they are sorted
-	fmt.Println(breastGeneNames[:5])
+	//fmt.Println(breastGeneNames[:5])
 
-	fmt.Println("Gathering gene names for ovarian cancer data.")
-	// Store the gene names for the Breast Cancer Data
-	ovarianGeneNames := GetGeneNames(filteredGeneExpressionOvarianMap)
-
-	//Print the first few breast gene names to check the names and ensure they are sorted
-	fmt.Println(ovarianGeneNames[:5])
-
-	//Compute the Pearson Correlation on breast cancer data
-	fmt.Println("Computing Pearson Correlation between genes across all breast cancer samples.")
+	//Compute the Pearson Correlation on dataset1 data
+	fmt.Printf("Computing Pearson Correlation between genes across all %s samples.\n", dataset1Label)
 
 	BreastPearsonCorrelationMatrix := ComputePearsonCorrelation(breastGeneNames, breastSampleNames, filteredGeneExpressionBreastMap)
 
-	//Compute the Pearson Correlation on ovarian cancer data
-	fmt.Println("Computing Pearson Correlation between genes across all ovarian cancer samples.")
-
-	OvarianPearsonCorrelationMatrix := ComputePearsonCorrelation(ovarianGeneNames, ovarianSampleNames, filteredGeneExpressionOvarianMap)
-
-	fmt.Println("Transforming the breast correlation matrix...")
+	fmt.Printf("Transforming the %s correlation matrix...\n", dataset1Label)
 	breastQuantileSlice := TransformMatrixToSlice(BreastPearsonCorrelationMatrix)
 
-	fmt.Println("Transforming the ovarian correlation matrix...")
-	ovarianQuantileSlice := TransformMatrixToSlice(OvarianPearsonCorrelationMatrix)
-
+	//sort the correlation values
 	sortedBreastQuantileSlice := SortCorrVals(breastQuantileSlice)
 
-	sortedOvarianQuantileSlice := SortCorrVals(ovarianQuantileSlice)
-
-	fmt.Println("Computing the breast quantile probabilities...")
-	computedBreastQuantiles := ComputeQuantile(sortedBreastQuantileSlice)
-
-	fmt.Println("Computing the ovarian quantile probabilities...")
-	computedOvarianQuantiles := ComputeQuantile(sortedOvarianQuantileSlice)
-
-	fmt.Println("Breast Cancer Quantile Probabilities:", computedBreastQuantiles)
-	fmt.Println("Ovarian Cancer Quantile Probabilities:", computedOvarianQuantiles)
-
 	//The 95% quantile probability chosen as the cutoff correlation value threshold
-	breastThreshold := computedBreastQuantiles[1]
-	ovarianThreshold := computedOvarianQuantiles[1]
 
-	fmt.Println("Building the Graph Networks...")
+	fmt.Printf("Computing the %s quantile probabilities...\n", dataset1Label)
+	computedBreastQuantiles := ComputeQuantile(sortedBreastQuantileSlice)
+	fmt.Printf("%s Quantile Probabilities: %v\n", dataset1Label, computedBreastQuantiles)
+	breastThreshold := computedBreastQuantiles[1]
+
+	fmt.Println("Building the Graph Network...")
 
 	//Build weighted, undirected cancer graph network with edge weights corresponding to raw computed correlations between genes (nodes)
 	BreastGraph := BuildGraph(BreastPearsonCorrelationMatrix, breastGeneNames, breastThreshold)
-	OvarianGraph := BuildGraph(OvarianPearsonCorrelationMatrix, ovarianGeneNames, ovarianThreshold)
 
 	////////////////////////////////////////////////////////////////
-
 	//Analyzing Graph Properties (Network Level per cancer type)
-	//Breast Cancer
+
+	//Dataset1 (Breast Cancer)
 	numBreastNodes := len(BreastGraph)
 	numBreastEdges := CalculateNumEdges(BreastGraph)
 	breastGraphDegree := ComputeAverageDegree(numBreastEdges, numBreastNodes)
 	breastEdgeDensity := ComputeEdgeDensity(numBreastEdges, numBreastNodes)
 	posBreastEdges, negBreastEdges := EdgeStats(BreastGraph)
-	fmt.Printf("\n===== Breast Cancer Graph Properties =====\n")
+	fmt.Printf("\n===== %s Graph Properties =====\n", dataset1Label)
 	fmt.Printf("Nodes (N):                  %d\n", numBreastNodes)
 	fmt.Printf("Edges (E):                  %d\n", numBreastEdges)
 	fmt.Printf("Average Degree:             %.3f\n", breastGraphDegree)
@@ -141,31 +108,14 @@ func main() {
 		posBreastEdges, 100*float64(posBreastEdges)/float64(numBreastEdges))
 	fmt.Printf("Negative Edges:             %d (%.3f%%)\n",
 		negBreastEdges, 100*float64(negBreastEdges)/float64(numBreastEdges))
-
-	//Ovarian Cancer
-	numOvarianNodes := len(OvarianGraph)
-	numOvarianEdges := CalculateNumEdges(OvarianGraph)
-	ovarianGraphDegree := ComputeAverageDegree(numOvarianEdges, numOvarianNodes)
-	ovarianEdgeDensity := ComputeEdgeDensity(numOvarianEdges, numOvarianNodes)
-	posOvarianEdges, negOvarianEdges := EdgeStats(OvarianGraph)
-	fmt.Printf("\n===== Ovarian Cancer Graph Properties =====\n")
-	fmt.Printf("Nodes (N):                  %d\n", numOvarianNodes)
-	fmt.Printf("Edges (E):                  %d\n", numOvarianEdges)
-	fmt.Printf("Average Degree:             %.3f\n", ovarianGraphDegree)
-	fmt.Printf("Edge Density:               %.6f\n", ovarianEdgeDensity)
-	fmt.Printf("Positive Edges:             %d (%.3f%%)\n",
-		posOvarianEdges, 100*float64(posOvarianEdges)/float64(numOvarianEdges))
-	fmt.Printf("Negative Edges:             %d (%.3f%%)\n",
-		negOvarianEdges, 100*float64(negOvarianEdges)/float64(numOvarianEdges))
+	// Compute node degrees for each graph (for node-level distributions)
+	breastDegrees := ComputeDegrees(BreastGraph)
 
 	//Build Louvain Graph type of cancer data to run the Louvain Algorithm
 	breastLouvainGraph := BuildLouvainGraph(BreastPearsonCorrelationMatrix, breastThreshold)
-	ovarianLouvainGraph := BuildLouvainGraph(OvarianPearsonCorrelationMatrix, ovarianThreshold)
-
 	fmt.Println("Running Louvain algorithm and assigning gene community clusters...")
 	//Run Louvain Algorithm from package to determine communities assignments (clusters of nodes) for further analysis and visualization
 	breastClusterMap, breastModularity := RunLouvainOnMatrix(breastLouvainGraph)
-	ovarianClusterMap, ovarianModularity := RunLouvainOnMatrix(ovarianLouvainGraph)
 
 	////////////////////////////////////////////////////////////////
 	//Module level Analyses per cancer type
@@ -177,149 +127,323 @@ func main() {
 		largestModB, largestPctB :=
 		SummarizeModuleSizes(breastModuleSizes, numBreastNodes)
 
-	fmt.Printf("\n===== Breast Cancer Module Properties =====\n")
+	fmt.Printf("\n===== %s Module Properties =====\n", dataset1Label)
 	fmt.Printf("Number of modules:                       %d\n", numModsB)
 	fmt.Printf("Module size (min / median / mean / max): %.0f / %.0f / %.1f / %.0f genes\n",
 		minB, medianB, meanB, maxB)
 	fmt.Printf("Modules with < 5 genes:                  %d\n", numSmallB)
 	fmt.Printf("Largest module:                          ID %d with %.0f genes (%.2f%% of genes)\n",
 		largestModB, maxB, largestPctB)
+	// Access results for modularity
+	fmt.Printf("%s graph modularity: %.4f\n", dataset1Label, breastModularity)
 
-	// Ovarian Cancer
-	ovarianModuleSizes := ComputeModuleSizes(ovarianClusterMap)
-	minO, maxO, meanO, medianO,
-		numModsO, numSmallO,
-		largestModO, largestPctO :=
-		SummarizeModuleSizes(ovarianModuleSizes, numOvarianNodes)
+	// Per-community edge counts and densities
+	breastModuleEdges := ComputeModuleEdgeCounts(BreastGraph, breastClusterMap)
+	breastModuleDensities := ComputeModuleDensities(breastModuleSizes, breastModuleEdges)
 
-	fmt.Printf("\n===== Ovarian Cancer Module Properties =====\n")
-	fmt.Printf("Number of modules:                       %d\n", numModsO)
-	fmt.Printf("Module size (min / median / mean / max): %.0f / %.0f / %.1f / %.0f genes\n",
-		minO, medianO, meanO, maxO)
-	fmt.Printf("Modules with < 5 genes:                  %d\n", numSmallO)
-	fmt.Printf("Largest module:                          ID %d with %.0f genes (%.2f%% of genes)\n",
-		largestModO, maxO, largestPctO)
-
-	// Access results for modularity and communities(clusters)
-	fmt.Printf("Final breast cancer graph modularity: %.4f\n", breastModularity)
-	fmt.Printf("Number of breast cancer communities: %d\n", CountCommunities(breastClusterMap))
-	fmt.Printf("Final ovarian cancer modularity: %.4f\n", ovarianModularity)
-	fmt.Printf("Number of ovarian cancer communities: %d\n", CountCommunities(ovarianClusterMap))
-
-	////////////////////////////////////////////////////////////////
-	//Analyses between Cancer type
-
-	fmt.Println("Conducting analyses between cancer types...")
-	fmt.Println("\n===== Jaccard Similarity: Breast vs Ovarian Modules =====")
-
-	// Compute Jaccard matrix between all breast and ovarian modules
-	jaccardMatrix, breastModuleIDs, ovarianModuleIDs := JaccardMatrix(breastClusterMap, ovarianClusterMap, breastGeneNames, ovarianGeneNames)
-
-	// Find which ovarian module is most similar to each breast module
-	breastToOvarianMatches := BestMatchesByRow(jaccardMatrix, breastModuleIDs, ovarianModuleIDs)
-
-	fmt.Println("\n--- Best Ovarian Match for Each Breast Module ---")
-	for _, match := range breastToOvarianMatches {
-		fmt.Printf("Breast Module %d -> Ovarian Module %d : Jaccard = %.4f\n",
-			match.SourceModuleID, match.TargetModuleID, match.JaccardValue)
+	// per-community node count, edge count, density table
+	fmt.Println("Module Structural Summary:")
+	fmt.Println("ModuleID | NumNodes | NumEdges | Density")
+	keys := make([]int, 0, len(breastModuleSizes))
+	for k := range breastModuleSizes {
+		keys = append(keys, k)
 	}
+	sort.Ints(keys)
 
-	// Find which breast module is most similar to each ovarian module
-	ovarianToBreastMatches := BestMatchesByColumn(jaccardMatrix, breastModuleIDs, ovarianModuleIDs)
-
-	fmt.Println("\n--- Best Breast Match for Each Ovarian Module ---")
-	for _, match := range ovarianToBreastMatches {
-		fmt.Printf("Ovarian Module %d -> Breast Module %d : Jaccard = %.4f\n",
-			match.SourceModuleID, match.TargetModuleID, match.JaccardValue)
-	}
-
-	//compute quantiles from the jaccard matrix to determine a threshold for significant module similarity
-	jaccardQuantiles := ComputeJaccardQuantiles(jaccardMatrix)
-	jaccardThreshold := jaccardQuantiles[1] // 95th percentile used as threshold for significance
-
-	// Extract all module pairs with Jaccard index >= jaccardThreshold to identify highly similar cross-cancer modules
-	modulePairs := ExtractPairsAboveJaccardThreshold(jaccardMatrix, breastModuleIDs, ovarianModuleIDs, jaccardThreshold)
-	fmt.Printf("\n===== Jaccard Threshold (95th percentile): %.4f =====\n", jaccardThreshold)
-
-	fmt.Println("\n===== Cross-Cancer Module Pairs Above Threshold =====")
-
-	// total gene universe size
-	totalGenes := TotalNumGenes(breastGeneNames, ovarianGeneNames)
-
-	// invert cluster maps to get lists of gene names for each module ID
-	breastModuleMap := InvertMapWithGeneNames(breastClusterMap, breastGeneNames)
-	ovarianModuleMap := InvertMapWithGeneNames(ovarianClusterMap, ovarianGeneNames)
-
-	// build full overlap + contingency info for each significant pair
-	overlapStats := BuildOverlapTables(
-		modulePairs,
-		breastModuleSizes, ovarianModuleSizes,
-		breastModuleMap, ovarianModuleMap,
-		totalGenes,
-	)
-
-	// compute Fisher p-values (right-tailed; enrichment of overlap) + BH FDR
-	overlapResults := ComputeOverlapPValues(overlapStats)
-
-	// sort by q-value (or p-value) for nicer printing
-	sort.Slice(overlapResults, func(i, j int) bool {
-		return overlapResults[i].QValue < overlapResults[j].QValue
-	})
-
-	// print descriptive info about each significant cross-cancer module pair
-	for _, r := range overlapResults {
-		fmt.Printf(
-			"Breast Module %d (|A|=%d) ↔ Ovarian Module %d (|B|=%d): Overlap=%d, Jaccard=%.4f, p=%.3e, q=%.3e\n",
-			r.BreastModuleID, r.SizeA,
-			r.OvarianModuleID, r.SizeB,
-			r.Overlap, r.Jaccard,
-			r.PValue, r.QValue,
-		)
+	for _, commID := range keys {
+		nNodes := breastModuleSizes[commID]
+		nEdges := breastModuleEdges[commID]
+		dens := breastModuleDensities[commID]
+		fmt.Printf("%11d | %8d | %8d | %.4f\n", commID, nNodes, nEdges, dens)
 	}
 
 	////////////////////////////////////////////////////////////////
-	//Computing Clustering Coefficients for each Graph Network
-	fmt.Println("Computing Clustering Coefficients for each Graph Network...")
+	//Computing Clustering Coefficients for Graph Network
+	fmt.Println("Computing Clustering Coefficients for Graph Network...")
 	breastLocalC := LocalClusteringCoeff(BreastGraph)
-	ovarianLocalC := LocalClusteringCoeff(OvarianGraph)
 
 	breastGlobalC := GlobalClusteringCoeff(breastLocalC)
-	ovarianGlobalC := GlobalClusteringCoeff(ovarianLocalC)
-	fmt.Println("\n===== Global Clustering Coefficients =====")
-	fmt.Printf("Breast Cancer global clustering coefficient:  %.4f\n", breastGlobalC)
-	fmt.Printf("Ovarian Cancer global clustering coefficient: %.4f\n", ovarianGlobalC)
+	fmt.Println("\n===== Global Clustering Coefficient =====")
+	fmt.Printf("%s global clustering coefficient:  %.4f\n", dataset1Label, breastGlobalC)
 
 	////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////
+	if arg == 2 {
+		//Analyzing Dataset2
 
-	//Identifying Hub Genes
+		//Begin Analyzing Dataset2 RNA seq gene count Data
+		//Create a map of maps. Nested map mapping gene_name (string) to sampleID(string) to tpm value
+		geneExpressionOvarianMap, err2 := ReadGeneExpressionDirToGeneMap(dataset2Path)
 
-	///////////////////////////////////////////////////////////////
-	//Write gene network and community assignments to CSV files
-	fmt.Println("Writing breast cancer gene network and community assignments to CSV files...")
+		// log any errors that may arise from the parsing/ reading in the ovarian data files
+		if err2 != nil {
+			log.Fatal(err2)
+		}
 
-	err3 := WriteCommunitiesCSV("ShinyApp/breast_nodes_communities.csv", breastGeneNames, breastClusterMap)
+		fmt.Printf("%s Gene Expression Data read and map created.\n", dataset2Label)
 
-	if err3 != nil {
-		panic(err3)
+		/*fmt.Println("Printing first line of geneExpressionOvarianMap")
+		//Check the format of the data file by printing the first line of our geneExpressionOvarianMap
+		for key, val := range geneExpressionOvarianMap {
+			fmt.Println(key, val)
+			break
+		}*/
+
+		fmt.Printf("Gathering sample names for %s data.\n", dataset2Label)
+		// Store the sample names for the Ovarian Cancer Data
+		ovarianSampleNames := GetSampleNames(geneExpressionOvarianMap)
+
+		//Sort the ovarian sample names
+		sortSampleNames(ovarianSampleNames)
+
+		//Print the ovarian sample names to ensure they are sorted by numerical order
+		//fmt.Println(ovarianSampleNames[:5])
+
+		fmt.Println("Cleaning Data...Filtering out low expression genes...")
+		// Use Mean-Based Filtering in order to normalize data while maintaining fixed number of samples across each gene
+		filteredGeneExpressionOvarianMap := MeanBasedFilter(geneExpressionOvarianMap, ovarianSampleNames, 10.0)
+
+		fmt.Printf("Gathering gene names for %s data.\n", dataset2Label)
+		// Store the gene names for the Breast Cancer Data
+		ovarianGeneNames := GetGeneNames(filteredGeneExpressionOvarianMap)
+
+		//Print the first few breast gene names to check the names and ensure they are sorted
+		//fmt.Println(ovarianGeneNames[:5])
+
+		//Compute the Pearson Correlation on dataset2 data
+		fmt.Printf("Computing Pearson Correlation between genes across all %s samples.\n", dataset2Label)
+
+		OvarianPearsonCorrelationMatrix := ComputePearsonCorrelation(ovarianGeneNames, ovarianSampleNames, filteredGeneExpressionOvarianMap)
+
+		fmt.Printf("Transforming the %s correlation matrix...\n", dataset2Label)
+		ovarianQuantileSlice := TransformMatrixToSlice(OvarianPearsonCorrelationMatrix)
+
+		//sort correlation values
+		sortedOvarianQuantileSlice := SortCorrVals(ovarianQuantileSlice)
+
+		fmt.Printf("Computing the %s quantile probabilities...\n", dataset2Label)
+		computedOvarianQuantiles := ComputeQuantile(sortedOvarianQuantileSlice)
+
+		fmt.Printf("%s Quantile Probabilities: %v\n", dataset2Label, computedOvarianQuantiles)
+
+		//The 95% quantile probability chosen as the cutoff correlation value threshold
+
+		ovarianThreshold := computedOvarianQuantiles[1]
+
+		fmt.Println("Building the Graph Networks...")
+
+		//Build weighted, undirected cancer graph network with edge weights corresponding to raw computed correlations between genes (nodes)
+
+		OvarianGraph := BuildGraph(OvarianPearsonCorrelationMatrix, ovarianGeneNames, ovarianThreshold)
+
+		////////////////////////////////////////////////////////////////
+		//Analyzing Graph Properties (Network Level per cancer type)
+		// Dataset2 (Ovarian Cancer)
+		numOvarianNodes := len(OvarianGraph)
+		numOvarianEdges := CalculateNumEdges(OvarianGraph)
+		ovarianGraphDegree := ComputeAverageDegree(numOvarianEdges, numOvarianNodes)
+		ovarianEdgeDensity := ComputeEdgeDensity(numOvarianEdges, numOvarianNodes)
+		posOvarianEdges, negOvarianEdges := EdgeStats(OvarianGraph)
+		fmt.Printf("\n===== %s Graph Properties =====\n", dataset2Label)
+		fmt.Printf("Nodes (N):                  %d\n", numOvarianNodes)
+		fmt.Printf("Edges (E):                  %d\n", numOvarianEdges)
+		fmt.Printf("Average Degree:             %.3f\n", ovarianGraphDegree)
+		fmt.Printf("Edge Density:               %.6f\n", ovarianEdgeDensity)
+		fmt.Printf("Positive Edges:             %d (%.3f%%)\n",
+			posOvarianEdges, 100*float64(posOvarianEdges)/float64(numOvarianEdges))
+		fmt.Printf("Negative Edges:             %d (%.3f%%)\n",
+			negOvarianEdges, 100*float64(negOvarianEdges)/float64(numOvarianEdges))
+		// Compute node degrees for each graph (for node-level distributions)
+		ovarianDegrees := ComputeDegrees(OvarianGraph)
+
+		//Build Louvain Graph type of cancer data to run the Louvain Algorithm
+		ovarianLouvainGraph := BuildLouvainGraph(OvarianPearsonCorrelationMatrix, ovarianThreshold)
+
+		fmt.Println("Running Louvain algorithm and assigning gene community clusters...")
+		//Run Louvain Algorithm from package to determine communities assignments (clusters of nodes) for further analysis and visualization
+
+		ovarianClusterMap, ovarianModularity := RunLouvainOnMatrix(ovarianLouvainGraph)
+
+		////////////////////////////////////////////////////////////////
+		// Module level Analyses per cancer type
+		// Ovarian Cancer
+		ovarianModuleSizes := ComputeModuleSizes(ovarianClusterMap)
+		minO, maxO, meanO, medianO,
+			numModsO, numSmallO,
+			largestModO, largestPctO :=
+			SummarizeModuleSizes(ovarianModuleSizes, numOvarianNodes)
+
+		fmt.Printf("\n===== %s Module Properties =====\n", dataset2Label)
+		fmt.Printf("Number of modules:                       %d\n", numModsO)
+		fmt.Printf("Module size (min / median / mean / max): %.0f / %.0f / %.1f / %.0f genes\n",
+			minO, medianO, meanO, maxO)
+		fmt.Printf("Modules with < 5 genes:                  %d\n", numSmallO)
+		fmt.Printf("Largest module:                          ID %d with %.0f genes (%.2f%% of genes)\n",
+			largestModO, maxO, largestPctO)
+		// Access results for modularity
+		fmt.Printf("%s graph modularity: %.4f\n", dataset2Label, ovarianModularity)
+
+		// Per-community edge counts and densities (Ovarian)
+		ovarianModuleEdges := ComputeModuleEdgeCounts(OvarianGraph, ovarianClusterMap)
+		ovarianModuleDensities := ComputeModuleDensities(ovarianModuleSizes, ovarianModuleEdges)
+
+		// per-community node count, edge count, density table
+		fmt.Println("Module Structural Summary:")
+		fmt.Println("ModuleID | NumNodes | NumEdges | Density")
+		keys = make([]int, 0, len(ovarianModuleSizes))
+		for k := range ovarianModuleSizes {
+			keys = append(keys, k)
+		}
+		sort.Ints(keys)
+
+		for _, commID := range keys {
+			nNodes := ovarianModuleSizes[commID]
+			nEdges := ovarianModuleEdges[commID]
+			dens := ovarianModuleDensities[commID]
+			fmt.Printf("%11d | %8d | %8d | %.4f\n", commID, nNodes, nEdges, dens)
+		}
+
+		////////////////////////////////////////////////////////////////
+		//Computing Clustering Coefficients for each Graph Network
+		fmt.Println("Computing Clustering Coefficients for Graph Network...")
+		ovarianLocalC := LocalClusteringCoeff(OvarianGraph)
+		ovarianGlobalC := GlobalClusteringCoeff(ovarianLocalC)
+
+		fmt.Println("\n===== Global Clustering Coefficient =====")
+		fmt.Printf("%s global clustering coefficient: %.4f\n", dataset2Label, ovarianGlobalC)
+
+		////////////////////////////////////////////////////////////////
+		////////////////////////////////////////////////////////////////
+		////////////////////////////////////////////////////////////////
+		//Analyses between Cancer type
+
+		fmt.Println("Conducting analyses between cancer types...")
+		/*
+			//number of nodes for each degree
+
+			//histogram
+				// 1. Degree distribution comparison-
+				//plot all the nodes degrees on it
+				//what this tells me: How the network connectivities differ?
+				//if one network is more modular? but we already know this based on the modularity calculation
+
+				breastDegrees
+
+				ovarianDegrees
+
+				// 2. Local clustering coefficient distribution comparison (plot cluster coeffs for each node in the network) bin histogram
+				//or density functon
+
+				breastLocalC
+
+				ovarianLocalC
+
+
+
+				// 3. Module size distribution comparison???????????
+				breastModuleSizes?????????
+
+				ovarianModuleSizes
+				// 4. Module density distribution comparison ??????????
+				breastModuleDensities
+
+				ovarianModuleDensities
+
+				fmt.Printf("\n===== Network Comparison Between %s and %s =====\n", dataset1Label, dataset2Label)
+				// Degree distributions (node-level, KS test) ---
+				Ddeg, pDeg := KSTestTwoSample(breastDegrees, ovarianDegrees)
+				fmt.Println("\nDegree distribution (Kolmogorov-Smirnov test):")
+				fmt.Printf("D statistic = %.4f, p-value = %.3e\n", Ddeg, pDeg)
+
+				// Local clustering coefficient distributions (node-level, KS test)
+				breastCNoNaN := FilterNaNs(breastLocalC)
+				ovarianCNoNaN := FilterNaNs(ovarianLocalC)
+				Dclust, pClust := KSTestTwoSample(breastCNoNaN, ovarianCNoNaN)
+				fmt.Println("\nLocal clustering coefficient distribution (Kolmogorov-Smirnov test):")
+				fmt.Printf("D statistic = %.4f, p-value = %.3e\n", Dclust, pClust)
+
+				//Distribution the edge weights for each??? to see the distribution of the strength of the connections
+				?????????????
+
+
+				//maybe instrad of these should do the number of nodes
+				// Module size distributions (module-level, KS test)
+				breastSizeSlice := MapIntValuesToFloatSlice(breastModuleSizes)
+				ovarianSizeSlice := MapIntValuesToFloatSlice(ovarianModuleSizes)
+				Dsize, pSize := KSTestTwoSamplet(breastSizeSlice, ovarianSizeSlice)
+				fmt.Println("\nModule size distribution (Kolmogorov-Smirnovtest):")
+				fmt.Printf("U statistic = %.4f, p-value = %.3e\n", Dsize, pSize)
+
+				// Module density distributions (module-level, KS test) or hsould this be edge density of each node?
+				breastDensSlice := MapFloatValuesToSlice(breastModuleDensities)
+				ovarianDensSlice := MapFloatValuesToSlice(ovarianModuleDensities)
+				Ddens, pDens := KSTestTwoSample(breastDensSlice, ovarianDensSlice)
+				fmt.Println("\nModule density distribution (Kolmogorov-Smirnov test):")
+				fmt.Printf("U statistic = %.4f, p-value = %.3e\n", Ddens, pDens)
+		*/
+
+		////////////////////////////////////////////////////////////////
+		////////////////////////////////////////////////////////////////
+		///////////////////////////////////////////////////////////////
+		//Write gene network, community assignments, and network stats to CSV files
+
+		fmt.Printf("Writing %s gene network information to CSV files...\n", dataset2Label)
+
+		err3 := WriteCommunitiesCSV(outputDir+"/dataset2_nodes_communities.csv", ovarianGeneNames, ovarianClusterMap)
+
+		if err3 != nil {
+			panic(err3)
+		}
+
+		err4 := WriteEdgesCSV(outputDir+"/dataset2_edges.csv", OvarianGraph)
+
+		if err4 != nil {
+			panic(err4)
+		}
+
+		// Write per-community stats for Ovarian Cancer to CSV (for Shiny + R distributions)
+		errOCStats := WriteCommunityStatsCSV(outputDir+"/dataset2_community_stats.csv", ovarianModuleSizes, ovarianModuleEdges, ovarianModuleDensities)
+
+		if errOCStats != nil {
+			panic(errOCStats)
+		}
+
+		// Write node-level stats to CSV for Ovarian Cancer
+		errONode := WriteNodeStatsCSV(outputDir+"/dataset2_node_stats.csv", ovarianGeneNames, ovarianClusterMap, ovarianDegrees, ovarianLocalC)
+
+		if errONode != nil {
+			panic(errONode)
+		}
+
 	}
 
-	err4 := WriteEdgesCSV("ShinyApp/breast_edges.csv", BreastGraph)
+	fmt.Printf("Writing %s gene network information to CSV files...\n", dataset1Label)
 
-	if err4 != nil {
-		panic(err4)
-	}
-
-	fmt.Println("Writing ovarian cancer gene network and community assignments to CSV files...")
-
-	err5 := WriteCommunitiesCSV("ShinyApp/ovarian_nodes_communities.csv", ovarianGeneNames, ovarianClusterMap)
+	err5 := WriteCommunitiesCSV(outputDir+"/dataset1_nodes_communities.csv", breastGeneNames, breastClusterMap)
 
 	if err5 != nil {
 		panic(err5)
 	}
 
-	err6 := WriteEdgesCSV("ShinyApp/ovarian_edges.csv", OvarianGraph)
+	err6 := WriteEdgesCSV(outputDir+"/dataset1_edges.csv", BreastGraph)
 
 	if err6 != nil {
 		panic(err6)
 	}
+
+	// Write per-community stats for Breast Cancer to CSV (for Shiny + R distributions)
+	errBCStats := WriteCommunityStatsCSV(outputDir+"/dataset1_community_stats.csv", breastModuleSizes, breastModuleEdges, breastModuleDensities)
+
+	if errBCStats != nil {
+		panic(errBCStats)
+	}
+
+	// Write node-level stats to CSV for Breast Cancer
+	errBNode := WriteNodeStatsCSV(outputDir+"/dataset1_node_stats.csv", breastGeneNames, breastClusterMap, breastDegrees, breastLocalC)
+
+	if errBNode != nil {
+		panic(errBNode)
+	}
+
 }
