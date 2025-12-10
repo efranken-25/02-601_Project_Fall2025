@@ -65,7 +65,10 @@ Integrating Go with R Shiny enables CPU-efficient backend processing while provi
 3. Install any Go dependencies (if not already in `go.mod`):
     `go get ./...`
 4. Run the main Go program:
-    `./02-601_Project_Fall2025` for Mac or `02-601_Project_Fall2025.exe` for Windows
+    * For one file:
+        - `./02-601_Project_Fall2025 1` for Mac or `02-601_Project_Fall2025 1` for Windows
+    * For two files:
+        - The default is two, so if there is not a number placed after the command-line command, two files will automatically be read. You also could do `./02-601_Project_Fall2025 2` for Mac or `02-601_Project_Fall2025 2` for Windows if you want to be consistent. 
 5. The output CSV files for gene networks and community/module assignments will be saved in the `ShinyApp/` folder. 
 
 ### Running the Shiny App (R)
