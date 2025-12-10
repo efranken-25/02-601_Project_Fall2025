@@ -168,13 +168,13 @@ server <- function(input, output, session) {
     status("Running Go pipeline (this may take ~10–30 seconds)...")
     
     # here() points to ShinyApp (where app.R lives)
-    base_dir <- here()  # /Users/bethany/ProgrammingProject/ShinyApp
+    base_dir <- here("ShinyApp")  # /Users/bethany/ProgrammingProject/ShinyApp
     
     # Project root (contains ProgrammingProject binary + ShinyApp/)
     project_dir <- dirname(base_dir)  # /Users/bethany/ProgrammingProject
     
     # Go executable in the project root
-    go_exe <- file.path(project_dir, "ProgrammingProject")
+    go_exe <- file.path(project_dir, "02-601_Project_Fall2025")
     
     message("DEBUG: project_dir = ", project_dir)
     message("DEBUG: go_exe      = ", go_exe)
@@ -464,4 +464,3 @@ server <- function(input, output, session) {
 # -------------------------------------------------------------------
 
 shinyApp(ui, server)
-

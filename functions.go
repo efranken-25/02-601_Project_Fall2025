@@ -1,12 +1,13 @@
 package main
 
 import (
-	"02-601_Project_Fall2025/louvain"
 	"context"
 	"log"
 	"math"
 	"sort"
 	"strconv"
+
+	"02-601_Project_Fall2025/louvain"
 
 	"golang.org/x/exp/stats"
 	"gonum.org/v1/gonum/stat"
