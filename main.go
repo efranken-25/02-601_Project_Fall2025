@@ -622,7 +622,6 @@ func main() {
 	errCorrMatrixB := SaveMatrixAsCSV("BreastPearsonCorrelationMatrix.csv",
 		BreastPearsonCorrelationMatrix, breastGeneNames, breastGeneNames)
 
-	///save Correlation Matrix in .csv/////////
 	if errCorrMatrixB != nil {
 		fmt.Println("Error saving Pearson matrix:", errCorrMatrixB)
 	} else {
