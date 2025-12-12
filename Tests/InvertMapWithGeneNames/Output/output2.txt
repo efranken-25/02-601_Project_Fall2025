@@ -1,0 +1,3 @@
+communityID:5
+GeneX,GeneY,GeneZ
+

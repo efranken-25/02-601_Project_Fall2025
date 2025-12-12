@@ -1,0 +1,7 @@
+geneNames: A,B,C,D,E
+clusterMap:
+0:100
+1:300
+2:200
+3:100
+4:300

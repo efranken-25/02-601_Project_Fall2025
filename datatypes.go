@@ -2,7 +2,7 @@
 //Programming for Scientists Project
 //October 31, 2025
 
-package main //s
+package main
 
 type ExpressionMap map[string]map[string]float64
 
@@ -57,7 +57,9 @@ type ModuleOverlapResult struct {
 	QValue float64
 }
 
+/*
 type idxP struct {
 	idx int
 	p   float64
 }
+*/

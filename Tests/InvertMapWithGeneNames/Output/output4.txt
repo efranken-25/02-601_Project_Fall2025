@@ -1,0 +1,6 @@
+communityID:100
+A,D
+communityID:200
+C
+communityID:300
+B,E

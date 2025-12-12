@@ -354,3 +354,60 @@ func ParseStringList(s string) []string {
 	}
 	return result
 }
+
+// Compare two maps[int][]string for equality (ignoring order)
+func CompareModuleMaps(a, b map[int][]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, va := range a {
+		vb, ok := b[k]
+		if !ok || len(va) != len(vb) {
+			return false
+		}
+		m := make(map[string]int)
+		for _, s := range va {
+			m[s]++
+		}
+		for _, s := range vb {
+			if _, ok := m[s]; !ok {
+				return false
+			}
+			m[s]--
+			if m[s] == 0 {
+				delete(m, s)
+			}
+		}
+		if len(m) != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func AdjacencySlicesEqual(a, b [][]int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if len(a[i]) != len(b[i]) {
+			return false
+		}
+		counts := make(map[int]int)
+		for _, val := range a[i] {
+			counts[val]++
+		}
+		for _, val := range b[i] {
+			if counts[val] == 0 {
+				return false
+			}
+			counts[val]--
+		}
+		for _, v := range counts {
+			if v != 0 {
+				return false
+			}
+		}
+	}
+	return true
+}

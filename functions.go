@@ -1,16 +1,13 @@
 package main
 
 import (
+	"02-601_Project_Fall2025/louvain"
 	"context"
 	"log"
 	"math"
+	"math/rand"
 	"sort"
 	"strconv"
-
-	"02-601_Project_Fall2025/louvain"
-
-	"golang.org/x/exp/stats"
-	"gonum.org/v1/gonum/stat"
 )
 
 // Function TransformMapToSlice takes a map's outerkey (geneName) and the map its in as input
@@ -169,7 +166,7 @@ func ComputePearsonCorrelation(sortedGeneNames, sortedSampleNames []string, filt
 
 			if len(gene1) >= 3 { //must have enough samples for the correlation
 				//compute the pearson correlation between different genes across samples
-				r := stat.Correlation(gene1, gene2, nil)
+				r := calculatePearsonCorrelation(gene1, gene2)
 				// store r correlation value in 2D matrix. Row and Column indices correspond to gene names
 				// found by the same indices stored in sortedGeneNames list for reference
 				// Diagonal should read with 1's
@@ -184,11 +181,47 @@ func ComputePearsonCorrelation(sortedGeneNames, sortedSampleNames []string, filt
 	return CorrMatrix
 }
 
-// Plan
-// calculate the quantile and choose the 95% as the cutoff corr value threshold
-// need to go through the matrix, append all the values into a growing slice
-// sort the slice
-// call the quantile operation from the stats package to compute the 90 95 99% quantile probabilities
+// Custom Pearson correlation calculation function
+// Function calculatePearsonCorrelation computes the Pearson correlation coefficient between two slices of float64 values using the formula:
+// r = Σ[(xi - x̄)(yi - ȳ)] / √[Σ(xi - x̄)²] × √[Σ(yi - ȳ)²]
+// where x̄ and ȳ are the means of x and y respectively
+// The function takes two slices of float64 values as input and returns the correlation coefficient as float64
+func calculatePearsonCorrelation(x, y []float64) float64 {
+	n := len(x)
+	// Check for invalid inputs: mismatched lengths or empty slices
+	if n != len(y) || n == 0 {
+		return math.NaN()
+	}
+
+	// Calculate means: x̄ = Σxi/n and ȳ = Σyi/n
+	sumX, sumY := 0.0, 0.0
+	for i := 0; i < n; i++ {
+		sumX += x[i]
+		sumY += y[i]
+	}
+	meanX := sumX / float64(n)
+	meanY := sumY / float64(n)
+
+	// Calculate the numerator Σ[(xi - x̄)(yi - ȳ)] and denominators Σ(xi - x̄)² and Σ(yi - ȳ)²
+	numerator := 0.0           // Σ[(xi - x̄)(yi - ȳ)] - covariance sum
+	sumSqX, sumSqY := 0.0, 0.0 // Σ(xi - x̄)² and Σ(yi - ȳ)² - variance sums
+
+	for i := 0; i < n; i++ {
+		dx := x[i] - meanX   // deviation from mean for x
+		dy := y[i] - meanY   // deviation from mean for y
+		numerator += dx * dy // accumulate covariance
+		sumSqX += dx * dx    // accumulate x variance
+		sumSqY += dy * dy    // accumulate y variance
+	}
+
+	// Calculate correlation coefficient: r = numerator / √(sumSqX × sumSqY)
+	denominator := math.Sqrt(sumSqX * sumSqY)
+	if denominator == 0 {
+		return math.NaN() // Handle division by zero (perfect constant values)
+	}
+
+	return numerator / denominator
+}
 
 // Function TransformMatrixToSlice takes a symmetrical square matrix as input and flattens
 // it into a single slice of float64 values for return.
@@ -222,12 +255,47 @@ func SortCorrVals(quantileSlice []float64) []float64 {
 // to be analyzed for determining the correlation threshold for edge determination
 func ComputeQuantile(quantileSlice []float64) []float64 {
 
+	// call the CalculateQuantile operation to compute the 90 95 99% quantile probabilities
 	quantileProbability := []float64{0.90, 0.95, 0.99}
 
-	computedQuantiles := stats.Quantiles(quantileSlice, quantileProbability...)
+	computedQuantiles := make([]float64, len(quantileProbability))
+	//compute the 90, 95, and 99 quantile probability
+	for i, p := range quantileProbability {
+		computedQuantiles[i] = CalculateQuantile(quantileSlice, p)
+	}
 
 	return computedQuantiles
-} //prints: [0.5576559638595919 0.6474333018882147 0.779461567805639]
+}
+
+// Function CalculateQuantile computes the quantile (output) for a given probability p (input) from a sorted slice (input)
+func CalculateQuantile(sortedData []float64, p float64) float64 {
+	n := len(sortedData)
+	//check that the data slice is not empty or length 1, if it is then return 0.0 probability
+	if n == 0 {
+		return 0.0
+	}
+	if n == 1 {
+		return sortedData[0]
+	}
+
+	// Calculate the position: (n-1) * p
+	pos := float64(n-1) * p
+
+	// Get the integer and fractional parts
+	lower := int(pos)
+	fraction := pos - float64(lower)
+
+	// Handle edge cases
+	if lower >= n-1 {
+		return sortedData[n-1]
+	}
+	if lower < 0 {
+		return sortedData[0]
+	}
+
+	// Linear interpolation between the two closest values
+	return sortedData[lower] + fraction*(sortedData[lower+1]-sortedData[lower])
+}
 
 // Function BuildGraph takes a correlation matrix as input along with the threshold and sorted list of gene names
 // it ranges over the values and determines if there is an edge between correlated genes based on the computed
@@ -521,17 +589,20 @@ func LargestModule(moduleSizes map[int]int) (int, int) {
 }
 
 // *ChatGPT generated*
-// SummarizeModuleSizes computes basic statistics on module sizes.
+// SummarizeModuleSizes computes comprehensive statistical measures on module (community) sizes using standard descriptive statistics.
+// This function analyzes the distribution of cluster sizes to understand network modularity structure.
 // Inputs:
-//   - moduleSizes: map[communityID]moduleSize
-//   - totalGenes: total number of nodes in the graph (for % calculations)
+//   - moduleSizes: map[communityID]moduleSize - mapping from each community ID to its node count
+//   - totalGenes: total number of nodes in the graph (for percentage calculations)
 //
 // Outputs:
-//   - minSize, maxSize, meanSize, medianSize: module size stats
-//   - numModules: total number of modules
-//   - numSmall: number of modules with size < 5
-//   - largestModuleID: ID of the largest module
-//   - largestPct: % of genes in the largest module
+//   - minSize, maxSize: minimum and maximum module sizes in the network
+//   - meanSize: arithmetic mean μ = (Σxi)/n where xi is size of module i, n is number of modules
+//   - medianSize: middle value when module sizes are sorted; for even n: median = (x[n/2-1] + x[n/2])/2
+//   - numModules: total count of distinct modules/communities
+//   - numSmall: count of modules with size < 5 (small module threshold)
+//   - largestModuleID: community ID of the module with maximum size
+//   - largestPct: percentage of total genes contained in largest module = (largestSize/totalGenes) × 100
 func SummarizeModuleSizes(
 	moduleSizes map[int]int,
 	totalGenes int,
@@ -542,55 +613,68 @@ func SummarizeModuleSizes(
 	largestPct float64,
 ) {
 	numModules = len(moduleSizes)
+	// Handle edge case: empty module map returns all zero values
 	if numModules == 0 {
 		return
 	}
 
+	// Initialize slice to store all module sizes for median calculation
 	sizes := make([]int, 0, numModules)
 
-	sum := 0
-	first := true
-	var minSizeInt, maxSizeInt, largestSize int
+	// Initialize variables for statistical calculations
+	sum := 0                                    // Σxi for mean calculation
+	first := true                               // flag for first iteration initialization
+	var minSizeInt, maxSizeInt, largestSize int // tracking min/max and largest module
 
+	// Single pass through moduleSizes map to collect statistics
 	for commID, size := range moduleSizes {
-		sizes = append(sizes, size)
-		sum += size
+		sizes = append(sizes, size) // store for median calculation
+		sum += size                 // accumulate sum for mean: Σxi
 
+		// Initialize or update min/max tracking on first iteration
 		if first {
 			minSizeInt = size
 			maxSizeInt = size
-			largestModuleID = commID
+			largestModuleID = commID // track ID of largest module
 			largestSize = size
 			first = false
 		} else {
+			// Update minimum module size
 			if size < minSizeInt {
 				minSizeInt = size
 			}
+			// Update maximum module size and largest module tracking
 			if size > maxSizeInt {
 				maxSizeInt = size
-				largestModuleID = commID
+				largestModuleID = commID // update ID of largest module
 				largestSize = size
 			}
 		}
 
+		// Count small modules (size < 5 threshold)
 		if size < 5 {
 			numSmall++
 		}
 	}
 
+	// Convert integer statistics to float64 for output
 	minSize = float64(minSizeInt)
 	maxSize = float64(maxSizeInt)
+	// Calculate arithmetic mean: μ = Σxi/n
 	meanSize = float64(sum) / float64(numModules)
 
-	// median
-	sort.Ints(sizes)
+	// Calculate median: middle value of sorted distribution
+	sort.Ints(sizes) // sort module sizes in ascending order
 	if numModules%2 == 1 {
+		// Odd number of modules: median = middle element
 		medianSize = float64(sizes[numModules/2])
 	} else {
+		// Even number of modules: median = average of two middle elements
 		mid := numModules / 2
 		medianSize = float64(sizes[mid-1]+sizes[mid]) / 2.0
 	}
 
+	// Calculate percentage of genes in largest module
 	if totalGenes > 0 {
 		largestPct = 100.0 * float64(largestSize) / float64(totalGenes)
 	}
@@ -638,217 +722,6 @@ func MapFloatValuesToSlice(m map[int]float64) []float64 {
 	return out
 }
 
-/*
-// Function CountOverlap takes as input 2 lists of genes corresponding to 2 different modules from different cancer types
-// and returns the number of overlapping genes (intersection count) between the two lists
-func CountOverlap(a, b []string) int {
-	// Build set for A
-	setA := make(map[string]bool, len(a))
-	//range over list of genes and put each gene into the map as a key and set its value to true
-	for _, x := range a {
-		setA[x] = true
-	}
-
-	// Count intersection |A ∩ B|
-	intersection := 0
-	for _, y := range b {
-		if setA[y] { //if that gene already exists in the map then it is an overlap
-			intersection++ //increase the count
-		}
-	}
-	//return overlapping count
-	return intersection
-}
-
-// Function Jaccard takes as input 2 lists of genes corresponding to 2 different modules from different cancer types
-// and computes the Jaccard index by (Number of overlapping genes) / (Total number of unique genes in both modules)
-// and returns the float64 index
-func Jaccard(a, b []string) float64 {
-	// Build set for A
-	setA := make(map[string]bool, len(a))
-	for _, x := range a {
-		setA[x] = true
-	}
-
-	// Count intersection |A ∩ B|
-	intersection := 0
-	for _, y := range b {
-		if setA[y] {
-			intersection++
-		}
-	}
-
-	// Compute union: |A| + |B| - |A ∩ B|
-	union := len(a) + len(b) - intersection
-	if union == 0 {
-		return 0.0
-	}
-	// J = |A ∩ B| / |A ∪ B|
-	return float64(intersection) / float64(union)
-}
-
-// Function JaccardMatrix takes 2 map[nodeID]communityID for each cancer type as input, and constructs a matrix for return corresponding to
-// the Jaccard index between each pair of modules across each cancer type. It also returns lists of the breast and ovarian module IDs
-func JaccardMatrix(breastClusterMap, ovarianClusterMap map[int]int, breastGeneNames, ovarianGeneNames []string) ([][]float64, []int, []int) {
-	// Invert maps to map each module to a slice of gene names
-	breastModuleMap := InvertMapWithGeneNames(breastClusterMap, breastGeneNames)
-	ovarianModuleMap := InvertMapWithGeneNames(ovarianClusterMap, ovarianGeneNames)
-
-	// Collect and sort module IDs to fix matrix ordering
-	breastIDs := make([]int, 0, len(breastModuleMap))
-	for id := range breastModuleMap {
-		breastIDs = append(breastIDs, id)
-	}
-	sort.Ints(breastIDs) //sort
-
-	ovarianIDs := make([]int, 0, len(ovarianModuleMap))
-	for id := range ovarianModuleMap {
-		ovarianIDs = append(ovarianIDs, id)
-	}
-	sort.Ints(ovarianIDs)
-
-	// Initialize Jaccard matrix: rows = breast modules, cols = ovarian modules
-	jaccardMatrix := make([][]float64, len(breastIDs))
-	for i := range jaccardMatrix {
-		jaccardMatrix[i] = make([]float64, len(ovarianIDs))
-	}
-
-	// Fill matrix with Jaccard(breast module, ovarian module)
-	for i, breastID := range breastIDs {
-		for j, ovarianID := range ovarianIDs {
-			genesB := breastModuleMap[breastID]
-			genesO := ovarianModuleMap[ovarianID]
-			jaccardMatrix[i][j] = Jaccard(genesB, genesO)
-		}
-	}
-
-	// Return matrix with jaccard indeces and the ID order for rows (breast mods) and columns (ovarian mods)
-	return jaccardMatrix, breastIDs, ovarianIDs
-}
-
-// Function BestMatchesByRow takes a Jaccard matrix, row module IDs, and column module IDs as input
-// and finds the best matching column module for each row module based on maximum Jaccard index.
-// Returns a slice of ModuleMatch structs containing source module ID, target module ID, and Jaccard value.
-func BestMatchesByRow(jaccardMatrix [][]float64, rowModuleIDs, colModuleIDs []int) []ModuleMatch {
-	//initialize the list of ModuleMatch structs for return containing the best matches
-	bestMatches := make([]ModuleMatch, 0, len(rowModuleIDs))
-
-	//range over the row modules (breast cancer modules)
-	for i, rowID := range rowModuleIDs {
-		maxJ := -1.0    //initialize with -1.0 because minimum real jaccard index is 0
-		bestColID := -1 //actual modules exist from 0
-
-		//range over the column modules (ovarian cancer modules)
-		for j, colID := range colModuleIDs {
-			//find the maximum jaccard index pair corresponding to the best matched ovarian module for every breast module
-			jacc := jaccardMatrix[i][j]
-			if jacc > maxJ {
-				maxJ = jacc
-				bestColID = colID
-			}
-		}
-
-		//build the struct for return
-		bestMatches = append(bestMatches, ModuleMatch{
-			SourceModuleID: rowID,
-			TargetModuleID: bestColID,
-			JaccardValue:   maxJ,
-		})
-	}
-
-	return bestMatches
-}
-
-// Function BestMatchesByColumn takes a Jaccard matrix, row module IDs, and column module IDs as input
-// and finds the best matching row module for each column module based on maximum Jaccard index.
-// Returns a slice of ModuleMatch structs containing source module ID, target module ID, and Jaccard value.
-func BestMatchesByColumn(jaccMat [][]float64, rowModuleIDs, colModuleIDs []int) []ModuleMatch {
-	//initialize the list of ModuleMatch structs for return containing the best matches
-	bestMatches := make([]ModuleMatch, 0, len(colModuleIDs))
-
-	//range over the column modules (ovarian cancer modules)
-	for j, colID := range colModuleIDs {
-		maxJ := -1.0    //initialize with -1.0 because minimum real jaccard index is 0
-		bestRowID := -1 //actual modules exist from 0
-
-		//range over the row modules (breast cancer modules)
-		for i, rowID := range rowModuleIDs {
-			//find the maximum jaccard index pair corresponding to the best matched breast module for every ovarian module
-			jacc := jaccMat[i][j]
-			if jacc > maxJ {
-				maxJ = jacc
-				bestRowID = rowID
-			}
-		}
-
-		//build the struct for return
-		bestMatches = append(bestMatches, ModuleMatch{
-			SourceModuleID: colID,
-			TargetModuleID: bestRowID,
-			JaccardValue:   maxJ,
-		})
-	}
-
-	return bestMatches
-}
-
-// Function TransformJaccardMatrixToSlice takes a nonsymmetrical matrix as input and flattens
-// it into a single slice of float64 values for return.
-func TransformJaccardMatrixToSlice(JaccardMatrix [][]float64) []float64 {
-	flattenedMatrix := make([]float64, 0)
-
-	numRows := len(JaccardMatrix)
-	numCols := len(JaccardMatrix[0])
-
-	//range over the matrix
-	for i := 0; i < numRows; i++ {
-		for j := 0; j < numCols; j++ {
-			value := JaccardMatrix[i][j]
-			//only keep nonzero Jaccard values
-			if value > 0 {
-				flattenedMatrix = append(flattenedMatrix, value)
-			}
-		}
-	}
-	return flattenedMatrix
-}
-
-// Function ComputeJaccardQuantiles takes a matrix of Jaccard index values between cross-cancer modules
-// and computes the 90th, 95th, and 99th percentile values.
-// We define strongly overlapping module pairs as those with Jaccard index above the 95th percentile
-// of all non-zero cross-cancer Jaccard values in the matrix.
-func ComputeJaccardQuantiles(JaccardMatrix [][]float64) []float64 {
-	flattenedMatrix := TransformJaccardMatrixToSlice(JaccardMatrix) //flattens matrix
-	jaccardValueList := SortCorrVals(flattenedMatrix)               //sorts the jaccard values
-	jaccardQuantiles := ComputeQuantile(jaccardValueList)           //computes 90, 95, 99th quantile probabilities from nonzero jaccard values
-	return jaccardQuantiles
-}
-
-// Function ExtractPairsAboveJaccardThreshold takes as input the Jaccard matrix,
-// the lists of breast and ovarian module IDs, and a Jaccard threshold.
-// It extracts all cross-cancer module pairs whose Jaccard index is greater than
-// or equal to the threshold and returns a slice of these module matches.
-func ExtractPairsAboveJaccardThreshold(jaccardMatrix [][]float64, breastModuleIDs, ovarianModuleIDs []int, threshold float64) []ModuleMatch {
-	topMatches := make([]ModuleMatch, 0)
-	// range over all breast × ovarian module pairs
-	for i := 0; i < len(jaccardMatrix); i++ {
-		for j := 0; j < len(jaccardMatrix[0]); j++ {
-
-			jValue := jaccardMatrix[i][j]
-
-			// keep only pairs above threshold
-			if jValue >= threshold {
-				topMatches = append(topMatches, ModuleMatch{
-					SourceModuleID: breastModuleIDs[i],
-					TargetModuleID: ovarianModuleIDs[j],
-					JaccardValue:   jValue,
-				})
-			}
-		}
-	}
-	return topMatches
-}
-*/
 // Function TotalNumGenes takes as input lists of breast and ovarian gene names in the dataset and returns a count of
 // the number of genes in the union of both sets.
 func TotalNumGenes(breastGeneNames, ovarianGeneNames []string) int {
@@ -866,130 +739,6 @@ func TotalNumGenes(breastGeneNames, ovarianGeneNames []string) int {
 	return len(geneUniverse)
 }
 
-/*
-// *ChatGPT generated*
-// BuildOverlapTables takes the significant module pairs and builds full
-// contingency tables + metadata for each pair.
-func BuildOverlapTables(
-	modulePairs []ModuleMatch,
-	breastModuleSizes, ovarianModuleSizes map[int]int,
-	breastModuleMap, ovarianModuleMap map[int][]string,
-	totalGenes int,
-) []ModuleOverlapStats {
-
-	overlapStats := make([]ModuleOverlapStats, 0, len(modulePairs))
-
-	for _, p := range modulePairs {
-		// module sizes
-		sizeA := breastModuleSizes[p.SourceModuleID]
-		sizeB := ovarianModuleSizes[p.TargetModuleID]
-
-		// gene lists
-		breastGenes := breastModuleMap[p.SourceModuleID]
-		ovarianGenes := ovarianModuleMap[p.TargetModuleID]
-
-		// compute overlap |A ∩ B|
-		overlap := CountOverlap(breastGenes, ovarianGenes)
-
-		// 2×2 table counts
-		a := overlap
-		b := sizeB - overlap
-		c := sizeA - overlap
-		d := totalGenes - (a + b + c)
-		if d < 0 {
-			d = 0 // guard, should not happen if totalGenes is correct
-		}
-
-		overlapStats = append(overlapStats, ModuleOverlapStats{
-			BreastModuleID:  p.SourceModuleID,
-			OvarianModuleID: p.TargetModuleID,
-			SizeA:           sizeA,
-			SizeB:           sizeB,
-			Overlap:         overlap,
-			A:               a,
-			B:               b,
-			C:               c,
-			D:               d,
-			TotalGenes:      totalGenes,
-			Jaccard:         p.JaccardValue,
-		})
-	}
-
-	return overlapStats
-}
-
-// *ChatGPT generated*
-// ComputeOverlapPValues runs Fisher's exact test (right-tailed) for each 2x2 table
-// and then applies Benjamini–Hochberg FDR correction.
-//
-// Right-tailed p-value here means:
-//
-//	P[X >= observed overlap | independence]
-//
-// which tests for enrichment of shared genes between modules.
-func ComputeOverlapPValues(stats []ModuleOverlapStats) []ModuleOverlapResult {
-	n := len(stats)
-	results := make([]ModuleOverlapResult, n)
-	pvals := make([]float64, n)
-
-	// 1) raw Fisher p-values (right-tailed; enrichment of overlap)
-	for i, s := range stats {
-		// Table:
-		//   n11 = A (in A and in B)
-		//   n12 = B (not in A, in B)
-		//   n21 = C (in A, not in B)
-		//   n22 = D (not in A, not in B)
-		_, _, rightp, _ := fisher.FisherExactTest(s.A, s.B, s.C, s.D)
-
-		pvals[i] = rightp
-		results[i] = ModuleOverlapResult{
-			ModuleOverlapStats: s,
-			PValue:             rightp,
-		}
-	}
-
-	// 2) Benjamini–Hochberg FDR across all tested pairs
-	qvals := benjaminiHochberg(pvals)
-	for i := range results {
-		results[i].QValue = qvals[i]
-	}
-
-	return results
-}
-
-// *ChatGPT generated*
-// benjaminiHochberg applies BH FDR to a slice of p-values.
-func benjaminiHochberg(p []float64) []float64 {
-
-	n := len(p)
-	arr := make([]idxP, n)
-	for i, v := range p {
-		arr[i] = idxP{idx: i, p: v}
-	}
-
-	// sort by p ascending
-	sort.Slice(arr, func(i, j int) bool { return arr[i].p < arr[j].p })
-
-	q := make([]float64, n)
-	prev := 1.0
-
-	// walk from largest p to smallest
-	for k := n - 1; k >= 0; k-- {
-		rank := float64(k + 1)
-		val := arr[k].p * float64(n) / rank
-		if val > 1.0 {
-			val = 1.0
-		}
-		if val > prev {
-			val = prev
-		}
-		prev = val
-		q[arr[k].idx] = val
-	}
-
-	return q
-}
-*/
 // Function LocalClusteringCoeff takes a graph network as input, computes the clustering coefficient of each node (gene) with the formula:
 // Ci = 2ni/ki(ki-1), where ni is the number of observed links connecting the ki neighbors of node i and ki(ki-1)/2
 // is the total number of possible links. The function returns a slice of local clustering coefficients for the
@@ -1104,34 +853,139 @@ func MeanStd(vals []float64) (mean float64, sd float64) {
 	return mean, sd
 }
 
-/*
-// IdentifyHubsByWeightedDegree identifies hub genes in a graph based on weighted degree. It takes as input a
-// graph network struct, #standard of deviations to calculate significance from the mean and outputs a list of
-// gene names, the mean, and standard deviation used for the statistical test.
-func IdentifyHubsByWeightedDegree(graph GraphNetwork, zThreshold float64) ([]string, float64, float64) {
-	// 1) Weighted degrees
-	weightedDegrees := ComputeWeightedDegrees(graph)
+// Function RandomGraphGenerator creates a random graph using the Erdős-Rényi G(n,p) model.
+// For each possible pair of nodes (genes), an edge is included independently with probability pVal.
+// The algorithm examines all (n choose 2) = n(n-1)/2 possible edges and includes each with fixed probability p.
+// This generates an undirected, unweighted random graph following the G(n,p) distribution.
+// Inputs: geneNames (slice of gene names for node labels), pVal (edge creation probability)
+// Outputs: random GraphNetwork with randomly connected genes where each edge has weight 1.0
+func RandomGraphGenerator(geneNames []string, pVal float64) GraphNetwork {
+	n := len(geneNames)
 
-	// 2) Find the mean and standard deviation
-	mean, sd := MeanStd(weightedDegrees)
-
-	// Edge case: if sd == 0, all nodes have same degree then there are no hubs in this case
-	if sd == 0 {
-		return nil, mean, sd
-	}
-
-	// 3) Find hubs: z >= zThreshold
-	hubGenes := make([]string, 0)
-
-	for i, wd := range weightedDegrees {
-		//Compute z-score for each node: z = (wd - mean) / sd.
-		z := (wd - mean) / sd
-		if z >= zThreshold {
-			// get gene name from graph node
-			hubGenes = append(hubGenes, graph[i].GeneName)
+	// Initialize nodes for the random graph
+	graph := make(GraphNetwork, n)
+	// Create new pointer nodes for every gene in this network
+	for i := 0; i < n; i++ {
+		graph[i] = &Node{
+			ID:       i,
+			GeneName: geneNames[i],
+			Edges:    []*Edge{},
 		}
 	}
 
-	return hubGenes, mean, sd
+	// Iterate over all possible unordered pairs of nodes (i,j)
+	// For each pair, include an edge with probability pVal
+	for i := 0; i < n; i++ {
+		for j := i + 1; j < n; j++ {
+			if rand.Float64() < pVal { // edge created with probability pVal
+				u := graph[i]
+				v := graph[j]
+
+				// Create undirected edge: add edge in both directions with weight 1.0
+				e1 := &Edge{To: v, Weight: 1.0}
+				e2 := &Edge{To: u, Weight: 1.0}
+				//add the edge to that node's edge list
+				u.Edges = append(u.Edges, e1)
+				v.Edges = append(v.Edges, e2)
+			}
+		}
+	}
+	//return the random graph
+	return graph
 }
-*/
+
+// Function calculateECDF calculates the Empirical Cumulative Distribution Function (ECDF) value
+// for a given sample (distribution) at a specific point x using the formula: ECDF(x) = (number of values ≤ x) / n
+func calculateECDF(sample []float64, x float64) float64 {
+	count := 0
+	//range over the sample and count the number of values that are <= x
+	for _, value := range sample {
+		if value <= x {
+			count++
+		}
+	}
+	//divide the count by total sample size for the Empirical CDF
+	return float64(count) / float64(len(sample))
+}
+
+// Function KSTwoSampleStatistic calculates the Kolmogorov-Smirnov D statistic for two samples
+// using the formula: D = max|F₁(x) - F₂(x)| where F₁ and F₂ are empirical CDFs
+func KSTwoSampleStatistic(sample1, sample2 []float64) float64 {
+
+	length1 := len(sample1)
+	length2 := len(sample2)
+	combinedLength := length1 + length2
+
+	// Combine both lists
+	combined := make([]float64, 0, combinedLength)
+	combined = append(combined, sample1...)
+	combined = append(combined, sample2...)
+
+	//Sort the combined list
+	sort.Float64s(combined)
+
+	// Remove duplicates from combined slice to only check unique points
+	uniqueCombined := make([]float64, 0, len(combined))
+	//add the first value to the unique list
+	uniqueCombined = append(uniqueCombined, combined[0])
+	//range through the combined list and if the value is not equal to the previous one,
+	//then it is not a duplicate and you can add it to unique list
+	for i := 1; i < len(combined); i++ {
+		if combined[i] != combined[i-1] {
+			uniqueCombined = append(uniqueCombined, combined[i])
+		}
+	}
+
+	// Find maximum absolute difference between empirical CDFs
+	maxD := 0.0
+	//calculate the empirical CDF for every value in the unique list
+	for _, x := range uniqueCombined {
+		ecdf1 := calculateECDF(sample1, x)
+		ecdf2 := calculateECDF(sample2, x)
+		//calculate the absolute value of the difference between the CDFs
+		d := math.Abs(ecdf1 - ecdf2)
+		//find the maximum difference
+		if d > maxD {
+			maxD = d
+		}
+	}
+
+	//maximum difference between empirical CDFs = Dstatistic
+	return maxD
+}
+
+// Function KSTest performs the two-sample Kolmogorov-Smirnov test to determine if two datasets
+// come from the same underlying distribution using the KS test statistic:
+// D = max|F₁(x) - F₂(x)| where F₁ and F₂ are the empirical cumulative distribution functions
+// The p-value is computed using the infinite series formula: p = 2*∑[k=1 to ∞] (-1)^(k-1)*e^(-2k² * λ²)
+// where λ = √(neff) * D and neff = (n₁ × n₂)/(n₁ + n₂)
+// Inputs: dataset1, dataset2 - two slices of float64 values to compare
+// Outputs: dStatistic (KS test statistic), pValue (probability of observing this difference under null hypothesis)
+func KSTest(dataset1, dataset2 []float64) (float64, float64) {
+
+	// Calculate KS test statistic
+	dStatistic := KSTwoSampleStatistic(dataset1, dataset2)
+
+	// Calculate the effective sample size
+	m := float64(len(dataset1)*len(dataset2)) / float64(len(dataset1)+len(dataset2))
+
+	//Calculate lamda: λ=sqrt(neff​)*dStatistic
+	lambda := math.Sqrt(m) * dStatistic
+
+	//compute pvalue from formula: p=2*∑​(−1)^(k−1)*e^(−2k^2 * λ^2)
+	sum := 0.0
+	for k := 1; k <= 100; k++ {
+		term := math.Pow(-1, float64(k-1)) * math.Exp(-2.0*float64(k*k)*lambda*lambda)
+		sum += term
+	}
+
+	pValue := 2.0 * sum
+
+	// Ensure p-value is positive
+	if pValue < 0 {
+		pValue = 0.0
+	}
+
+	//return the D statistic and p value
+	return dStatistic, pValue
+}

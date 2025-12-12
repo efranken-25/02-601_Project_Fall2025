@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"sort"
 	"strconv"
@@ -12,11 +13,9 @@ const (
 	//USER: Label your datasets here.
 	dataset1Label = "Breast Cancer"
 	dataset2Label = "Ovarian Cancer"
-	dataset3Label = "Lung Cancer"
 
 	dataset1Path = "GeneExpressionData/Dataset1"
 	dataset2Path = "GeneExpressionData/Dataset2"
-	dataset3Path = "GeneExpressionData/Dataset3"
 
 	outputDir = "ShinyApp"
 )
@@ -43,11 +42,11 @@ func main() {
 	fmt.Printf("%s Gene Expression Data read and map created.\n", dataset1Label)
 
 	/*fmt.Println("Printing first line of geneExpressionBreastMap")
-	//Check the format of the data file by printing the first line of our geneExpressionBreastMap
-	for key, val := range geneExpressionBreastMap {
-		fmt.Println(key, val)
-		break
-	}*/
+	  //Check the format of the data file by printing the first line of our geneExpressionBreastMap
+	  for key, val := range geneExpressionBreastMap {
+	      fmt.Println(key, val)
+	      break
+	  }*/
 
 	fmt.Printf("Gathering sample names for %s data.\n", dataset1Label)
 
@@ -98,54 +97,54 @@ func main() {
 	BreastGraph := BuildGraph(BreastPearsonCorrelationMatrix, breastGeneNames, breastThreshold)
 
 	/*
-		//Begin Analyzing Dataset3 RNA seq gene count Data
-		// Create a map of maps. Nested map mapping gene_name (string) to sampleID(string) to tpm value
-		geneExpressionLungMap, err1 := ReadGeneExpressionDirToGeneMap(dataset3Path)
+	   //Begin Analyzing Dataset3 RNA seq gene count Data
+	   // Create a map of maps. Nested map mapping gene_name (string) to sampleID(string) to tpm value
+	   geneExpressionLungMap, err1 := ReadGeneExpressionDirToGeneMap(dataset3Path)
 
-		// log any errors that may arise from the parsing/ reading in the breast data files
-		if err1 != nil {
-			log.Fatal(err1)
-		}
+	   // log any errors that may arise from the parsing/ reading in the breast data files
+	   if err1 != nil {
+	       log.Fatal(err1)
+	   }
 
-		fmt.Printf("%s Gene Expression Data read and map created.\n", dataset3Label)
+	   fmt.Printf("%s Gene Expression Data read and map created.\n", dataset3Label)
 
-		fmt.Printf("Gathering sample names for %s data.\n", dataset3Label)
+	   fmt.Printf("Gathering sample names for %s data.\n", dataset3Label)
 
-		// Store the sample names for the Lung Cancer Data
-		lungSampleNames := GetSampleNames(geneExpressionLungMap)
+	   // Store the sample names for the Lung Cancer Data
+	   lungSampleNames := GetSampleNames(geneExpressionLungMap)
 
-		//Sort the lung sample names
-		sortSampleNames(lungSampleNames)
+	   //Sort the lung sample names
+	   sortSampleNames(lungSampleNames)
 
-		fmt.Println("Cleaning Data...Filtering out low expression genes...")
-		// Use Mean-Based Filtering in order to normalize data while maintaining fixed number of samples across each gene
-		filteredGeneExpressionLungMap := MeanBasedFilter(geneExpressionLungMap, lungSampleNames, 20.0)
+	   fmt.Println("Cleaning Data...Filtering out low expression genes...")
+	   // Use Mean-Based Filtering in order to normalize data while maintaining fixed number of samples across each gene
+	   filteredGeneExpressionLungMap := MeanBasedFilter(geneExpressionLungMap, lungSampleNames, 20.0)
 
-		fmt.Printf("Gathering gene names for %s data.\n", dataset3Label)
+	   fmt.Printf("Gathering gene names for %s data.\n", dataset3Label)
 
-		// Store the gene names for the Lung Cancer Data (sorted)
-		lungGeneNames := GetGeneNames(filteredGeneExpressionLungMap)
+	   // Store the gene names for the Lung Cancer Data (sorted)
+	   lungGeneNames := GetGeneNames(filteredGeneExpressionLungMap)
 
-		//Compute the Pearson Correlation on dataset1 data
-		fmt.Printf("Computing Pearson Correlation between genes across all %s samples.\n", dataset3Label)
-		LungPearsonCorrelationMatrix := ComputePearsonCorrelation(lungGeneNames, lungSampleNames, filteredGeneExpressionLungMap)
+	   //Compute the Pearson Correlation on dataset1 data
+	   fmt.Printf("Computing Pearson Correlation between genes across all %s samples.\n", dataset3Label)
+	   LungPearsonCorrelationMatrix := ComputePearsonCorrelation(lungGeneNames, lungSampleNames, filteredGeneExpressionLungMap)
 
-		fmt.Printf("Transforming the %s correlation matrix...\n", dataset3Label)
-		lungQuantileSlice := TransformMatrixToSlice(LungPearsonCorrelationMatrix)
+	   fmt.Printf("Transforming the %s correlation matrix...\n", dataset3Label)
+	   lungQuantileSlice := TransformMatrixToSlice(LungPearsonCorrelationMatrix)
 
-		//sort the correlation values
-		sortedLungQuantileSlice := SortCorrVals(lungQuantileSlice)
+	   //sort the correlation values
+	   sortedLungQuantileSlice := SortCorrVals(lungQuantileSlice)
 
-		//The 95% quantile probability chosen as the cutoff correlation value threshold (high value)
-		fmt.Printf("Computing the %s quantile probabilities...\n", dataset3Label)
-		computedLungQuantiles := ComputeQuantile(sortedLungQuantileSlice)
-		fmt.Printf("%s Quantile Probabilities: %v\n", dataset3Label, computedLungQuantiles)
-		LungThreshold := computedLungQuantiles[2]
+	   //The 95% quantile probability chosen as the cutoff correlation value threshold (high value)
+	   fmt.Printf("Computing the %s quantile probabilities...\n", dataset3Label)
+	   computedLungQuantiles := ComputeQuantile(sortedLungQuantileSlice)
+	   fmt.Printf("%s Quantile Probabilities: %v\n", dataset3Label, computedLungQuantiles)
+	   LungThreshold := computedLungQuantiles[2]
 
-		fmt.Println("Building the Graph Network...")
+	   fmt.Println("Building the Graph Network...")
 
-		//Build weighted, undirected cancer graph network with edge weights corresponding to raw computed correlations between genes (nodes)
-		LungGraph := BuildGraph(LungPearsonCorrelationMatrix, lungGeneNames, LungThreshold)
+	   //Build weighted, undirected cancer graph network with edge weights corresponding to raw computed correlations between genes (nodes)
+	   LungGraph := BuildGraph(LungPearsonCorrelationMatrix, lungGeneNames, LungThreshold)
 
 	*/
 	////////////////////////////////////////////////////////////////
@@ -176,29 +175,29 @@ func main() {
 	breastClusterMap, breastModularity := RunLouvainOnMatrix(breastLouvainGraph)
 
 	/*
-		//Dataset3 (Lung Cancer)
-		numLungNodes := len(LungGraph)
-		numLungEdges := CalculateNumEdges(LungGraph)
-		lungGraphDegree := ComputeAverageDegree(numLungEdges, numLungNodes)
-		lungEdgeDensity := ComputeEdgeDensity(numLungEdges, numLungNodes)
-		posLungEdges, negLungEdges := EdgeStats(LungGraph)
-		fmt.Printf("\n===== %s Graph Properties =====\n", dataset3Label)
-		fmt.Printf("Nodes (N):                  %d\n", numLungNodes)
-		fmt.Printf("Edges (E):                  %d\n", numLungEdges)
-		fmt.Printf("Average Degree:             %.3f\n", lungGraphDegree)
-		fmt.Printf("Edge Density:               %.6f\n", lungEdgeDensity)
-		fmt.Printf("Positive Edges:             %d (%.3f%%)\n",
-			posLungEdges, 100*float64(posLungEdges)/float64(numLungEdges))
-		fmt.Printf("Negative Edges:             %d (%.3f%%)\n",
-			negLungEdges, 100*float64(negLungEdges)/float64(numLungEdges))
-		// Compute node degrees for each graph (for node-level distributions)
-		LungDegrees := ComputeDegrees(LungGraph)
+	   //Dataset3 (Lung Cancer)
+	   numLungNodes := len(LungGraph)
+	   numLungEdges := CalculateNumEdges(LungGraph)
+	   lungGraphDegree := ComputeAverageDegree(numLungEdges, numLungNodes)
+	   lungEdgeDensity := ComputeEdgeDensity(numLungEdges, numLungNodes)
+	   posLungEdges, negLungEdges := EdgeStats(LungGraph)
+	   fmt.Printf("\n===== %s Graph Properties =====\n", dataset3Label)
+	   fmt.Printf("Nodes (N):                  %d\n", numLungNodes)
+	   fmt.Printf("Edges (E):                  %d\n", numLungEdges)
+	   fmt.Printf("Average Degree:             %.3f\n", lungGraphDegree)
+	   fmt.Printf("Edge Density:               %.6f\n", lungEdgeDensity)
+	   fmt.Printf("Positive Edges:             %d (%.3f%%)\n",
+	       posLungEdges, 100*float64(posLungEdges)/float64(numLungEdges))
+	   fmt.Printf("Negative Edges:             %d (%.3f%%)\n",
+	       negLungEdges, 100*float64(negLungEdges)/float64(numLungEdges))
+	   // Compute node degrees for each graph (for node-level distributions)
+	   LungDegrees := ComputeDegrees(LungGraph)
 
-		//Build Louvain Graph type of cancer data to run the Louvain Algorithm
-		LungLouvainGraph := BuildLouvainGraph(LungPearsonCorrelationMatrix, LungThreshold)
-		fmt.Println("Running Louvain algorithm and assigning gene community clusters...")
-		//Run Louvain Algorithm from package to determine communities assignments (clusters of nodes) for further analysis and visualization
-		lungClusterMap, lungModularity := RunLouvainOnMatrix(LungLouvainGraph)
+	   //Build Louvain Graph type of cancer data to run the Louvain Algorithm
+	   LungLouvainGraph := BuildLouvainGraph(LungPearsonCorrelationMatrix, LungThreshold)
+	   fmt.Println("Running Louvain algorithm and assigning gene community clusters...")
+	   //Run Louvain Algorithm from package to determine communities assignments (clusters of nodes) for further analysis and visualization
+	   lungClusterMap, lungModularity := RunLouvainOnMatrix(LungLouvainGraph)
 	*/
 	////////////////////////////////////////////////////////////////
 	//Module level Analyses per cancer type
@@ -241,42 +240,42 @@ func main() {
 	}
 
 	/*
-		// Lung Cancer
-		LungModuleSizes := ComputeModuleSizes(lungClusterMap)
-		minL, maxL, meanL, medianL,
-			numModsL, numSmallL,
-			largestModL, largestPctL :=
-			SummarizeModuleSizes(LungModuleSizes, numLungNodes)
+	   // Lung Cancer
+	   LungModuleSizes := ComputeModuleSizes(lungClusterMap)
+	   minL, maxL, meanL, medianL,
+	       numModsL, numSmallL,
+	       largestModL, largestPctL :=
+	       SummarizeModuleSizes(LungModuleSizes, numLungNodes)
 
-		fmt.Printf("\n===== %s Module Properties =====\n", dataset3Label)
-		fmt.Printf("Number of modules:                       %d\n", numModsL)
-		fmt.Printf("Module size (min / median / mean / max): %.0f / %.0f / %.1f / %.0f genes\n",
-			minL, medianL, meanL, maxL)
-		fmt.Printf("Modules with < 5 genes:                  %d\n", numSmallL)
-		fmt.Printf("Largest module:                          ID %d with %.0f genes (%.2f%% of genes)\n",
-			largestModL, maxL, largestPctL)
-		// Access results for modularity
-		fmt.Printf("%s graph modularity: %.4f\n", dataset3Label, lungModularity)
+	   fmt.Printf("\n===== %s Module Properties =====\n", dataset3Label)
+	   fmt.Printf("Number of modules:                       %d\n", numModsL)
+	   fmt.Printf("Module size (min / median / mean / max): %.0f / %.0f / %.1f / %.0f genes\n",
+	       minL, medianL, meanL, maxL)
+	   fmt.Printf("Modules with < 5 genes:                  %d\n", numSmallL)
+	   fmt.Printf("Largest module:                          ID %d with %.0f genes (%.2f%% of genes)\n",
+	       largestModL, maxL, largestPctL)
+	   // Access results for modularity
+	   fmt.Printf("%s graph modularity: %.4f\n", dataset3Label, lungModularity)
 
-		// Per-community edge counts and densities
-		LungModuleEdges := ComputeModuleEdgeCounts(LungGraph, lungClusterMap)
-		LungModuleDensities := ComputeModuleDensities(LungModuleSizes, LungModuleEdges)
+	   // Per-community edge counts and densities
+	   LungModuleEdges := ComputeModuleEdgeCounts(LungGraph, lungClusterMap)
+	   LungModuleDensities := ComputeModuleDensities(LungModuleSizes, LungModuleEdges)
 
-		// per-community node count, edge count, density table
-		fmt.Println("Module Structural Summary:")
-		fmt.Println("ModuleID | NumNodes | NumEdges | Density")
-		keys := make([]int, 0, len(LungModuleSizes))
-		for k := range LungModuleSizes {
-			keys = append(keys, k)
-		}
-		sort.Ints(keys)
+	   // per-community node count, edge count, density table
+	   fmt.Println("Module Structural Summary:")
+	   fmt.Println("ModuleID | NumNodes | NumEdges | Density")
+	   keys := make([]int, 0, len(LungModuleSizes))
+	   for k := range LungModuleSizes {
+	       keys = append(keys, k)
+	   }
+	   sort.Ints(keys)
 
-		for _, commID := range keys {
-			nNodes := LungModuleSizes[commID]
-			nEdges := LungModuleEdges[commID]
-			dens := LungModuleDensities[commID]
-			fmt.Printf("%11d | %8d | %8d | %.4f\n", commID, nNodes, nEdges, dens)
-		}
+	   for _, commID := range keys {
+	       nNodes := LungModuleSizes[commID]
+	       nEdges := LungModuleEdges[commID]
+	       dens := LungModuleDensities[commID]
+	       fmt.Printf("%11d | %8d | %8d | %.4f\n", commID, nNodes, nEdges, dens)
+	   }
 	*/
 	////////////////////////////////////////////////////////////////
 	//Computing Clustering Coefficients for Graph Network
@@ -308,11 +307,11 @@ func main() {
 		fmt.Printf("%s Gene Expression Data read and map created.\n", dataset2Label)
 
 		/*fmt.Println("Printing first line of geneExpressionOvarianMap")
-		//Check the format of the data file by printing the first line of our geneExpressionOvarianMap
-		for key, val := range geneExpressionOvarianMap {
-			fmt.Println(key, val)
-			break
-		}*/
+		  //Check the format of the data file by printing the first line of our geneExpressionOvarianMap
+		  for key, val := range geneExpressionOvarianMap {
+		      fmt.Println(key, val)
+		      break
+		  }*/
 
 		fmt.Printf("Gathering sample names for %s data.\n", dataset2Label)
 		// Store the sample names for the Ovarian Cancer Data
@@ -440,77 +439,125 @@ func main() {
 		////////////////////////////////////////////////////////////////
 		////////////////////////////////////////////////////////////////
 		////////////////////////////////////////////////////////////////
-		//Analyses between Cancer type
+		// Network Topology Analysis: Real vs Random Graph Comparisons
 
-		fmt.Println("Conducting analyses between cancer types...")
-		/*
-			//number of nodes for each degree
+		fmt.Println("\nNetwork Topology Analysis: Analyzing whether gene co-expression networks exhibit non-random topological properties...")
 
-			//histogram
-				// 1. Degree distribution comparison-
-				//plot all the nodes degrees on it
-				//what this tells me: How the network connectivities differ?
-				//if one network is more modular? but we already know this based on the modularity calculation
+		//Setting the seed
+		rand.Seed(42)
 
-				breastDegrees
+		// Generate random graphs using Erdős-Rényi G(n,p) model for both cancer types
+		fmt.Println("Generating breast cancer random graph using Erdős-Rényi G(n,p) model...")
+		breastRandomGraph := RandomGraphGenerator(breastGeneNames, 0.3)
 
-				ovarianDegrees
+		fmt.Println("Generating ovarian cancer random graph using Erdős-Rényi G(n,p) model...")
+		ovarianRandomGraph := RandomGraphGenerator(ovarianGeneNames, 0.3)
 
-				// 2. Local clustering coefficient distribution comparison (plot cluster coeffs for each node in the network) bin histogram
-				//or density functon
+		// Compute degree distributions for random graphs
+		fmt.Println("Computing degree distributions for random graph networks...")
+		breastRandomDegrees := ComputeDegrees(breastRandomGraph)
+		ovarianRandomDegrees := ComputeDegrees(ovarianRandomGraph)
 
-				breastLocalC
+		// Statistical comparison: Real vs Random degree distributions using Kolmogorov-Smirnov test
+		fmt.Printf("\n===== %s: Real vs Random Network Comparison =====\n", dataset1Label)
+		breastDStatistic, breastPValue := KSTest(breastDegrees, breastRandomDegrees)
+		fmt.Printf("Kolmogorov-Smirnov test comparing real vs random degree distributions:\n")
+		fmt.Printf("D-statistic: %.4f\n", breastDStatistic)
+		// Handle very small p-values for scientific reporting
+		if breastPValue < 0.001 {
+			fmt.Printf("P-value: < 0.001 (highly significant)\n")
+		} else {
+			fmt.Printf("P-value: %.3f\n", breastPValue)
+		}
 
-				ovarianLocalC
+		// Interpret statistical significance for breast cancer
+		if breastPValue < 0.001 {
+			fmt.Printf("Result: Significantly different degree distributions (p < 0.001)\n")
+			fmt.Printf("The real %s network has a significantly different structure than the random model.\n", dataset1Label)
+		} else {
+			fmt.Printf("Result: No significant difference in degree distributions (p ≥ 0.001)\n")
+			fmt.Printf("The real %s network structure is not significantly different from the random model.\n", dataset1Label)
+		}
 
+		fmt.Printf("\n===== %s: Real vs Random Network Comparison =====\n", dataset2Label)
+		ovarianDStatistic, ovarianPValue := KSTest(ovarianDegrees, ovarianRandomDegrees)
+		fmt.Printf("Kolmogorov-Smirnov test comparing real vs random degree distributions:\n")
+		fmt.Printf("D-statistic: %.4f\n", ovarianDStatistic)
+		// Handle very small p-values for scientific reporting
+		if ovarianPValue < 0.001 {
+			fmt.Printf("P-value: < 0.001 (highly significant)\n")
+		} else {
+			fmt.Printf("P-value: %.3f\n", ovarianPValue)
+		}
 
+		// Interpret statistical significance for ovarian cancer
+		if ovarianPValue < 0.001 {
+			fmt.Printf("Result: Significantly different degree distributions (p < 0.001)\n")
+			fmt.Printf("The real %s network has a significantly different structure than the random model.\n", dataset2Label)
+		} else {
+			fmt.Printf("Result: No significant difference in degree distributions (p ≥ 0.001)\n")
+			fmt.Printf("The real %s network structure is not significantly different from the random model.\n", dataset2Label)
+		}
 
-				// 3. Module size distribution comparison???????????
-				breastModuleSizes?????????
+		// Cross-Cancer Type Analysis: Breast vs Ovarian Degree Distribution Comparison
+		fmt.Printf("\n===== Degree Distribution Cross-Cancer Analysis: %s vs %s =====\n", dataset1Label, dataset2Label)
 
-				ovarianModuleSizes
-				// 4. Module density distribution comparison ??????????
-				breastModuleDensities
+		// Statistical comparison: Breast vs Ovarian degree distributions using Kolmogorov-Smirnov test
+		crossCancerDStatistic, crossCancerPValue := KSTest(breastDegrees, ovarianDegrees)
+		fmt.Printf("Kolmogorov-Smirnov test comparing %s vs %s degree distributions:\n", dataset1Label, dataset2Label)
+		fmt.Printf("D-statistic: %.4f\n", crossCancerDStatistic)
+		// Handle very small p-values for scientific reporting
+		if crossCancerPValue < 0.001 {
+			fmt.Printf("P-value: < 0.001 (highly significant)\n")
+		} else {
+			fmt.Printf("P-value: %.3f\n", crossCancerPValue)
+		}
 
-				ovarianModuleDensities
-
-				fmt.Printf("\n===== Network Comparison Between %s and %s =====\n", dataset1Label, dataset2Label)
-				// Degree distributions (node-level, KS test) ---
-				Ddeg, pDeg := KSTestTwoSample(breastDegrees, ovarianDegrees)
-				fmt.Println("\nDegree distribution (Kolmogorov-Smirnov test):")
-				fmt.Printf("D statistic = %.4f, p-value = %.3e\n", Ddeg, pDeg)
-
-				// Local clustering coefficient distributions (node-level, KS test)
-				breastCNoNaN := FilterNaNs(breastLocalC)
-				ovarianCNoNaN := FilterNaNs(ovarianLocalC)
-				Dclust, pClust := KSTestTwoSample(breastCNoNaN, ovarianCNoNaN)
-				fmt.Println("\nLocal clustering coefficient distribution (Kolmogorov-Smirnov test):")
-				fmt.Printf("D statistic = %.4f, p-value = %.3e\n", Dclust, pClust)
-
-				//Distribution the edge weights for each??? to see the distribution of the strength of the connections
-				?????????????
-
-
-				//maybe instrad of these should do the number of nodes
-				// Module size distributions (module-level, KS test)
-				breastSizeSlice := MapIntValuesToFloatSlice(breastModuleSizes)
-				ovarianSizeSlice := MapIntValuesToFloatSlice(ovarianModuleSizes)
-				Dsize, pSize := KSTestTwoSamplet(breastSizeSlice, ovarianSizeSlice)
-				fmt.Println("\nModule size distribution (Kolmogorov-Smirnovtest):")
-				fmt.Printf("U statistic = %.4f, p-value = %.3e\n", Dsize, pSize)
-
-				// Module density distributions (module-level, KS test) or hsould this be edge density of each node?
-				breastDensSlice := MapFloatValuesToSlice(breastModuleDensities)
-				ovarianDensSlice := MapFloatValuesToSlice(ovarianModuleDensities)
-				Ddens, pDens := KSTestTwoSample(breastDensSlice, ovarianDensSlice)
-				fmt.Println("\nModule density distribution (Kolmogorov-Smirnov test):")
-				fmt.Printf("U statistic = %.4f, p-value = %.3e\n", Ddens, pDens)
-		*/
+		// Interpret statistical significance for cross-cancer comparison
+		if crossCancerPValue < 0.001 {
+			fmt.Printf("Result: Significantly different degree distributions between cancer types (p < 0.001)\n")
+			fmt.Printf("The %s and %s networks have significantly different topological structures.\n", dataset1Label, dataset2Label)
+		} else {
+			fmt.Printf("Result: No significant difference in degree distributions between cancer types (p ≥ 0.001)\n")
+			fmt.Printf("The %s and %s networks have similar topological structures.\n", dataset1Label, dataset2Label)
+		}
 
 		////////////////////////////////////////////////////////////////
 		////////////////////////////////////////////////////////////////
-		///////////////////////////////////////////////////////////////
-		//Write gene network, community assignments, and network stats to CSV files
+		////////////////////////////////////////////////////////////////
+		// Local Clustering Coefficient Comparison between Cancer Types
+		fmt.Printf("\n===== Clustering Coefficient Cross-Cancer Analysis: %s vs %s =====\n", dataset1Label, dataset2Label)
+
+		// Filter out NaN values from clustering coefficients before statistical comparison
+		breastClusteringFiltered := FilterNaNs(breastLocalC)
+		ovarianClusteringFiltered := FilterNaNs(ovarianLocalC)
+
+		// Statistical comparison: Breast vs Ovarian clustering coefficient distributions using Kolmogorov-Smirnov test
+		clusteringDStatistic, clusteringPValue := KSTest(breastClusteringFiltered, ovarianClusteringFiltered)
+		fmt.Printf("Kolmogorov-Smirnov test comparing %s vs %s clustering coefficient distributions:\n", dataset1Label, dataset2Label)
+		fmt.Printf("D-statistic: %.4f\n", clusteringDStatistic)
+		// Handle very small p-values for scientific reporting
+		if clusteringPValue < 0.001 {
+			fmt.Printf("P-value: < 0.001 (highly significant)\n")
+		} else {
+			fmt.Printf("P-value: %.3f\n", clusteringPValue)
+		}
+
+		// Interpret statistical significance for clustering coefficient comparison
+		if clusteringPValue < 0.001 {
+			fmt.Printf("Result: Significantly different clustering coefficient distributions between cancer types (p < 0.001)\n")
+			fmt.Printf("The %s and %s networks have significantly different local clustering patterns.\n", dataset1Label, dataset2Label)
+		} else {
+			fmt.Printf("Result: No significant difference in clustering coefficient distributions between cancer types (p ≥ 0.001)\n")
+			fmt.Printf("The %s and %s networks have similar local clustering patterns.\n", dataset1Label, dataset2Label)
+		}
+
+		////////////////////////////////////////////////////////////////
+		////////////////////////////////////////////////////////////////
+		////////////////////////////////////////////////////////////////
+		// Data Export: Write Network Analysis Results to CSV Files
+		// Export network structures, community assignments, and statistical measures
+		// for visualization and further analysis in R/Shiny applications
 
 		fmt.Printf("Writing %s gene network information to CSV files...\n", dataset2Label)
 
@@ -580,14 +627,12 @@ func main() {
 	fmt.Printf("Writing %s gene network information to CSV files...\n", dataset1Label)
 
 	err5 := WriteCommunitiesCSV(outputDir+"/dataset1_nodes_communities.csv", breastGeneNames, breastClusterMap)
-	//err5 := WriteCommunitiesCSV(outputDir+"/dataset3_nodes_communities.csv", lungGeneNames, lungClusterMap)
 
 	if err5 != nil {
 		panic(err5)
 	}
 
 	err6 := WriteEdgesCSV(outputDir+"/dataset1_edges.csv", BreastGraph)
-	//err6 := WriteEdgesCSV(outputDir+"/dataset3_edges.csv", LungGraph)
 
 	if err6 != nil {
 		panic(err6)
@@ -595,6 +640,21 @@ func main() {
 
 	// Write per-community stats for Breast Cancer to CSV (for Shiny + R distributions)
 	errBCStats := WriteCommunityStatsCSV(outputDir+"/dataset1_community_stats.csv", breastModuleSizes, breastModuleEdges, breastModuleDensities)
+
+	if errBCStats != nil {
+		panic(errBCStats)
+	}
+
+	// Write node-level stats to CSV for Breast Cancer
+	errBNode := WriteNodeStatsCSV(outputDir+"/dataset1_node_stats.csv", breastGeneNames, breastClusterMap, breastDegrees, breastLocalC)
+
+	if errBNode != nil {
+		panic(errBNode)
+	}
+	fmt.Printf("Writing %s gene network information to CSV files...\n", dataset1Label)
+
+	// Write per-community stats for Breast Cancer to CSV (for Shiny + R distributions)
+	errBCStats = WriteCommunityStatsCSV(outputDir+"/dataset1_community_stats.csv", breastModuleSizes, breastModuleEdges, breastModuleDensities)
 
 	// Write per-community stats for Lung Cancer to CSV (for Shiny + R distributions)
 	//errBCStats := WriteCommunityStatsCSV(outputDir+"/dataset3_community_stats.csv", LungModuleSizes, LungModuleEdges, LungModuleDensities)
@@ -604,7 +664,7 @@ func main() {
 	}
 
 	// Write node-level stats to CSV for Breast Cancer
-	errBNode := WriteNodeStatsCSV(outputDir+"/dataset1_node_stats.csv", breastGeneNames, breastClusterMap, breastDegrees, breastLocalC)
+	errBNode = WriteNodeStatsCSV(outputDir+"/dataset1_node_stats.csv", breastGeneNames, breastClusterMap, breastDegrees, breastLocalC)
 
 	// Write node-level stats to CSV for Breast Cancer
 	//errBNode := WriteNodeStatsCSV(outputDir+"/dataset3_node_stats.csv", lungGeneNames, lungClusterMap, LungDegrees, LungLocalC)
@@ -617,16 +677,18 @@ func main() {
 	// grabs largest module and saves data in .csv file
 	SaveLargestModule(BreastGraph, breastClusterMap, "largest_module.csv")
 
-	///save Correlation Matrix in .csv/////////
-	//breast (dataset1)
-	errCorrMatrixB := SaveMatrixAsCSV("BreastPearsonCorrelationMatrix.csv",
-		BreastPearsonCorrelationMatrix, breastGeneNames, breastGeneNames)
+	/*
+		///save Correlation Matrix in .csv/////////
+		//breast (dataset1)
+		errCorrMatrixB := SaveMatrixAsCSV("BreastPearsonCorrelationMatrix.csv",
+			BreastPearsonCorrelationMatrix, breastGeneNames, breastGeneNames)
 
-	if errCorrMatrixB != nil {
-		fmt.Println("Error saving Pearson matrix:", errCorrMatrixB)
-	} else {
-		fmt.Println("Pearson correlation matrix saved.")
-	}
+		if errCorrMatrixB != nil {
+			fmt.Println("Error saving Pearson matrix:", errCorrMatrixB)
+		} else {
+			fmt.Println("Pearson correlation matrix saved.")
+		}
+	*/
 
 	//////// Save module within 400-550 genes ///////////
 	// Breast - Read node–community CSV

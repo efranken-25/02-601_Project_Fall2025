@@ -1999,3 +1999,523 @@ func ReadGlobalClusteringCoeffOutputs(outputDir string) [][]float64 {
 	}
 	return outputs
 }
+
+type LargestModuleTest struct {
+	moduleSizes map[int]int
+	resultComm  int
+	resultSize  int
+}
+
+func TestLargestModule(t *testing.T) {
+	tests := ReadLargestModuleTests("Tests/LargestModules")
+
+	for _, test := range tests {
+		gotComm, gotSize := LargestModule(test.moduleSizes)
+
+		if gotComm != test.resultComm || gotSize != test.resultSize {
+			t.Errorf("LargestModule(%v) failed.\nGot: (%d, %d)\nWant: (%d, %d)",
+				test.moduleSizes, gotComm, gotSize, test.resultComm, test.resultSize)
+		}
+	}
+}
+
+func ReadLargestModuleTests(directory string) []LargestModuleTest {
+	inputFiles := ReadDirectory(directory + "/Input")
+	outputFiles := ReadDirectory(directory + "/Output")
+
+	if len(inputFiles) != len(outputFiles) {
+		panic("number of input and output files do not match")
+	}
+
+	tests := make([]LargestModuleTest, len(inputFiles))
+
+	// ---- Read Input Files ----
+	for i, inputFile := range inputFiles {
+		f, err := os.Open(directory + "/Input/" + inputFile.Name())
+		if err != nil {
+			panic(err)
+		}
+		scanner := bufio.NewScanner(f)
+
+		current := LargestModuleTest{
+			moduleSizes: make(map[int]int),
+		}
+
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+
+			pair := strings.SplitN(line, ":", 2)
+			if len(pair) != 2 {
+				continue
+			}
+
+			keyStr := strings.TrimSpace(pair[0])
+			valStr := strings.TrimSpace(pair[1])
+
+			key, err := strconv.Atoi(keyStr)
+			if err != nil {
+				panic(err)
+			}
+			val, err := strconv.Atoi(valStr)
+			if err != nil {
+				panic(err)
+			}
+
+			current.moduleSizes[key] = val
+		}
+		f.Close()
+		tests[i] = current
+	}
+
+	// ---- Read Output Files ----
+	for i, outputFile := range outputFiles {
+		f, err := os.Open(directory + "/Output/" + outputFile.Name())
+		if err != nil {
+			panic(err)
+		}
+		scanner := bufio.NewScanner(f)
+
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+
+			if strings.HasPrefix(line, "community:") {
+				valStr := strings.TrimSpace(strings.TrimPrefix(line, "community:"))
+				v, err := strconv.Atoi(valStr)
+				if err != nil {
+					panic(err)
+				}
+				tests[i].resultComm = v
+			}
+
+			if strings.HasPrefix(line, "size:") {
+				valStr := strings.TrimSpace(strings.TrimPrefix(line, "size:"))
+				v, err := strconv.Atoi(valStr)
+				if err != nil {
+					panic(err)
+				}
+				tests[i].resultSize = v
+			}
+		}
+
+		f.Close()
+	}
+
+	return tests
+}
+
+type InvertMapWithGeneNamesTest struct {
+	clusterMap map[int]int
+	geneNames  []string
+	result     map[int][]string
+}
+
+func TestInvertMapWithGeneNames(t *testing.T) {
+	tests := ReadInvertMapWithGeneNamesTests("Tests/InvertMapWithGeneNames")
+	for _, test := range tests {
+		got := InvertMapWithGeneNames(test.clusterMap, test.geneNames)
+		if !CompareModuleMaps(got, test.result) {
+			t.Errorf("InvertMapWithGeneNames(%v, %v) failed.\nGot: %v\nWant: %v",
+				test.clusterMap, test.geneNames, got, test.result)
+		}
+	}
+}
+
+// parsing code
+func ReadInvertMapWithGeneNamesTests(directory string) []InvertMapWithGeneNamesTest {
+	inputFiles := ReadDirectory(directory + "/Input")
+	outputFiles := ReadDirectory(directory + "/Output")
+	if len(inputFiles) != len(outputFiles) {
+		panic("number of input and output files do not match")
+	}
+
+	tests := make([]InvertMapWithGeneNamesTest, len(inputFiles))
+
+	for i, inputFile := range inputFiles {
+		f, err := os.Open(directory + "/Input/" + inputFile.Name())
+		if err != nil {
+			panic(err)
+		}
+		scanner := bufio.NewScanner(f)
+
+		current := InvertMapWithGeneNamesTest{
+			clusterMap: make(map[int]int),
+			geneNames:  []string{},
+		}
+
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+
+			if strings.HasPrefix(line, "geneNames:") {
+				namesStr := strings.TrimSpace(strings.TrimPrefix(line, "geneNames:"))
+				current.geneNames = strings.Split(namesStr, ",")
+				for i := range current.geneNames {
+					current.geneNames[i] = strings.TrimSpace(current.geneNames[i])
+				}
+			} else if strings.HasPrefix(line, "clusterMap:") {
+				// subsequent lines are nodeID:communityID
+				for scanner.Scan() {
+					mapLine := strings.TrimSpace(scanner.Text())
+					if mapLine == "" || strings.HasPrefix(mapLine, "#") {
+						continue
+					}
+					pair := strings.SplitN(mapLine, ":", 2)
+					if len(pair) != 2 {
+						break
+					}
+					nodeID, err1 := strconv.Atoi(strings.TrimSpace(pair[0]))
+					commID, err2 := strconv.Atoi(strings.TrimSpace(pair[1]))
+					if err1 != nil || err2 != nil {
+						panic("Invalid clusterMap entry")
+					}
+					current.clusterMap[nodeID] = commID
+				}
+				break
+			}
+		}
+		f.Close()
+		tests[i] = current
+	}
+
+	// read output files
+	for i, outputFile := range outputFiles {
+		f, err := os.Open(directory + "/Output/" + outputFile.Name())
+		if err != nil {
+			panic(err)
+		}
+		scanner := bufio.NewScanner(f)
+		outMap := make(map[int][]string)
+		var currentKey int
+
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+
+			if strings.HasPrefix(line, "communityID:") {
+				keyStr := strings.TrimSpace(strings.TrimPrefix(line, "communityID:"))
+				key, err := strconv.Atoi(keyStr)
+				if err != nil {
+					panic(err)
+				}
+				currentKey = key
+				outMap[currentKey] = []string{}
+			} else {
+				genes := strings.Split(line, ",")
+				for _, g := range genes {
+					g = strings.TrimSpace(g)
+					if g != "" {
+						outMap[currentKey] = append(outMap[currentKey], g)
+					}
+				}
+			}
+		}
+		f.Close()
+		tests[i].result = outMap
+	}
+
+	return tests
+}
+
+type MapIntValuesToFloatSliceTest struct {
+	input  map[int]int
+	result []float64
+}
+
+func TestMapIntValuesToFloatSlice(t *testing.T) {
+	tests := ReadMapIntValuesToFloatSliceTests("Tests/MapIntValuesToFloatSlice")
+	for _, test := range tests {
+		got := MapIntValuesToFloatSlice(test.input)
+		if !FloatSlicesEqualUnordered(got, test.result) {
+			t.Errorf("MapIntValuesToFloatSlice(%v) failed.\nGot: %v\nWant: %v",
+				test.input, got, test.result)
+		}
+	}
+}
+
+func ReadMapIntValuesToFloatSliceTests(directory string) []MapIntValuesToFloatSliceTest {
+	inputFiles := ReadDirectory(directory + "/Input")
+	outputFiles := ReadDirectory(directory + "/Output")
+	if len(inputFiles) != len(outputFiles) {
+		panic("number of input and output files do not match")
+	}
+
+	tests := make([]MapIntValuesToFloatSliceTest, len(inputFiles))
+
+	for i, inputFile := range inputFiles {
+		f, err := os.Open(directory + "/Input/" + inputFile.Name())
+		if err != nil {
+			panic(err)
+		}
+		scanner := bufio.NewScanner(f)
+		current := MapIntValuesToFloatSliceTest{
+			input: make(map[int]int),
+		}
+
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			// expected format: key:value
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			key, err1 := strconv.Atoi(strings.TrimSpace(parts[0]))
+			val, err2 := strconv.Atoi(strings.TrimSpace(parts[1]))
+			if err1 != nil || err2 != nil {
+				panic("invalid integer in input file")
+			}
+			current.input[key] = val
+		}
+		f.Close()
+		tests[i] = current
+	}
+
+	// read output files
+	for i, outputFile := range outputFiles {
+		f, err := os.Open(directory + "/Output/" + outputFile.Name())
+		if err != nil {
+			panic(err)
+		}
+		scanner := bufio.NewScanner(f)
+		outputVals := []float64{}
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			for _, p := range strings.Split(line, ",") {
+				valStr := strings.TrimSpace(p)
+				if valStr == "" {
+					continue
+				}
+				val, err := strconv.ParseFloat(valStr, 64)
+				if err != nil {
+					panic(err)
+				}
+				outputVals = append(outputVals, val)
+			}
+		}
+		f.Close()
+		tests[i].result = outputVals
+	}
+
+	return tests
+}
+
+type FilterNaNsTest struct {
+	input  []float64
+	result []float64
+}
+
+func TestFilterNaNs(t *testing.T) {
+	tests := ReadFilterNaNsTests("Tests/FilterNaNs")
+	for _, test := range tests {
+		got := FilterNaNs(test.input)
+		if !FloatSlicesEqualUnordered(got, test.result) {
+			t.Errorf("FilterNaNs(%v) failed.\nGot: %v\nWant: %v",
+				test.input, got, test.result)
+		}
+	}
+}
+
+func ReadFilterNaNsTests(directory string) []FilterNaNsTest {
+	inputFiles := ReadDirectory(directory + "/Input")
+	outputFiles := ReadDirectory(directory + "/Output")
+
+	if len(inputFiles) != len(outputFiles) {
+		panic("number of input and output files do not match")
+	}
+
+	tests := make([]FilterNaNsTest, len(inputFiles))
+
+	// read input files
+	for i, inputFile := range inputFiles {
+		f, err := os.Open(directory + "/Input/" + inputFile.Name())
+		if err != nil {
+			panic(err)
+		}
+		defer f.Close()
+
+		scanner := bufio.NewScanner(f)
+		inputVals := []float64{}
+
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			for _, p := range strings.Split(line, ",") {
+				valStr := strings.TrimSpace(p)
+				if valStr == "" {
+					continue
+				}
+				if valStr == "NaN" || valStr == "nan" {
+					inputVals = append(inputVals, math.NaN())
+					continue
+				}
+				val, err := strconv.ParseFloat(valStr, 64)
+				if err != nil {
+					panic(err)
+				}
+				inputVals = append(inputVals, val)
+			}
+		}
+		tests[i].input = inputVals
+		f.Close()
+	}
+
+	// read output files
+	for i, outputFile := range outputFiles {
+		f, err := os.Open(directory + "/Output/" + outputFile.Name())
+		if err != nil {
+			panic(err)
+		}
+		defer f.Close()
+
+		scanner := bufio.NewScanner(f)
+		outputVals := []float64{}
+
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			for _, p := range strings.Split(line, ",") {
+				valStr := strings.TrimSpace(p)
+				if valStr == "" {
+					continue
+				}
+				val, err := strconv.ParseFloat(valStr, 64)
+				if err != nil {
+					panic(err)
+				}
+				outputVals = append(outputVals, val)
+			}
+		}
+		tests[i].result = outputVals
+		f.Close()
+	}
+
+	return tests
+}
+
+type ComputeDegreesTest struct {
+	graph  GraphNetwork
+	result []float64
+}
+
+// TestComputeDegrees runs all tests for ComputeDegrees
+func TestComputeDegrees(t *testing.T) {
+	tests := ReadComputeDegreesTests("Tests/ComputeDegrees")
+	for _, test := range tests {
+		got := ComputeDegrees(test.graph)
+		if !FloatSlicesEqualUnordered(got, test.result) {
+			t.Errorf("ComputeDegrees() failed.\nGot: %v\nWant: %v", got, test.result)
+		}
+	}
+}
+
+// ReadComputeDegreesTests reads input/output files for ComputeDegrees tests
+func ReadComputeDegreesTests(directory string) []ComputeDegreesTest {
+	inputFiles := ReadDirectory(directory + "/Input")
+	outputFiles := ReadDirectory(directory + "/Output")
+	if len(inputFiles) != len(outputFiles) {
+		panic("number of input and output files do not match")
+	}
+
+	tests := make([]ComputeDegreesTest, len(inputFiles))
+
+	for i, inputFile := range inputFiles {
+		f, err := os.Open(directory + "/Input/" + inputFile.Name())
+		if err != nil {
+			panic(err)
+		}
+		scanner := bufio.NewScanner(f)
+
+		nodes := GraphNetwork{}
+		var nodeMap = make(map[int]*Node)
+
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			// line format: NodeID,GeneName,Neighbor1ID,Neighbor2ID,...
+			parts := strings.Split(line, ",")
+			nodeID, _ := strconv.Atoi(parts[0])
+			node := &Node{ID: nodeID, GeneName: parts[1]}
+			nodes = append(nodes, node)
+			nodeMap[nodeID] = node
+		}
+		f.Close()
+
+		// second pass to add edges
+		f, _ = os.Open(directory + "/Input/" + inputFile.Name())
+		scanner = bufio.NewScanner(f)
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			parts := strings.Split(line, ",")
+			nodeID, _ := strconv.Atoi(parts[0])
+			node := nodeMap[nodeID]
+			for _, neighborStr := range parts[2:] {
+				if neighborStr == "" {
+					continue
+				}
+				neighborID, _ := strconv.Atoi(neighborStr)
+				neighborNode, exists := nodeMap[neighborID]
+				if exists {
+					node.Edges = append(node.Edges, &Edge{To: neighborNode})
+				}
+			}
+		}
+		f.Close()
+
+		tests[i].graph = nodes
+	}
+
+	// read output files
+	for i, outputFile := range outputFiles {
+		f, err := os.Open(directory + "/Output/" + outputFile.Name())
+		if err != nil {
+			panic(err)
+		}
+		scanner := bufio.NewScanner(f)
+		outputVals := []float64{}
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			for _, p := range strings.Split(line, ",") {
+				valStr := strings.TrimSpace(p)
+				if valStr == "" {
+					continue
+				}
+				val, err := strconv.ParseFloat(valStr, 64)
+				if err != nil {
+					panic(err)
+				}
+				outputVals = append(outputVals, val)
+			}
+		}
+		f.Close()
+		tests[i].result = outputVals
+	}
+
+	return tests
+}
