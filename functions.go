@@ -5,11 +5,9 @@ import (
 	"context"
 	"log"
 	"math"
+	"math/rand"
 	"sort"
 	"strconv"
-
-	"golang.org/x/exp/stats"
-	"gonum.org/v1/gonum/stat"
 )
 
 // Function TransformMapToSlice takes a map's outerkey (geneName) and the map its in as input
@@ -168,7 +166,7 @@ func ComputePearsonCorrelation(sortedGeneNames, sortedSampleNames []string, filt
 
 			if len(gene1) >= 3 { //must have enough samples for the correlation
 				//compute the pearson correlation between different genes across samples
-				r := stat.Correlation(gene1, gene2, nil)
+				r := calculatePearsonCorrelation(gene1, gene2)
 				// store r correlation value in 2D matrix. Row and Column indices correspond to gene names
 				// found by the same indices stored in sortedGeneNames list for reference
 				// Diagonal should read with 1's
@@ -183,11 +181,47 @@ func ComputePearsonCorrelation(sortedGeneNames, sortedSampleNames []string, filt
 	return CorrMatrix
 }
 
-// Plan
-// calculate the quantile and choose the 95% as the cutoff corr value threshold
-// need to go through the matrix, append all the values into a growing slice
-// sort the slice
-// call the quantile operation from the stats package to compute the 90 95 99% quantile probabilities
+// Custom Pearson correlation calculation function
+// Function calculatePearsonCorrelation computes the Pearson correlation coefficient between two slices of float64 values using the formula:
+// r = Σ[(xi - x̄)(yi - ȳ)] / √[Σ(xi - x̄)²] × √[Σ(yi - ȳ)²]
+// where x̄ and ȳ are the means of x and y respectively
+// The function takes two slices of float64 values as input and returns the correlation coefficient as float64
+func calculatePearsonCorrelation(x, y []float64) float64 {
+	n := len(x)
+	// Check for invalid inputs: mismatched lengths or empty slices
+	if n != len(y) || n == 0 {
+		return math.NaN()
+	}
+
+	// Calculate means: x̄ = Σxi/n and ȳ = Σyi/n
+	sumX, sumY := 0.0, 0.0
+	for i := 0; i < n; i++ {
+		sumX += x[i]
+		sumY += y[i]
+	}
+	meanX := sumX / float64(n)
+	meanY := sumY / float64(n)
+
+	// Calculate the numerator Σ[(xi - x̄)(yi - ȳ)] and denominators Σ(xi - x̄)² and Σ(yi - ȳ)²
+	numerator := 0.0           // Σ[(xi - x̄)(yi - ȳ)] - covariance sum
+	sumSqX, sumSqY := 0.0, 0.0 // Σ(xi - x̄)² and Σ(yi - ȳ)² - variance sums
+
+	for i := 0; i < n; i++ {
+		dx := x[i] - meanX   // deviation from mean for x
+		dy := y[i] - meanY   // deviation from mean for y
+		numerator += dx * dy // accumulate covariance
+		sumSqX += dx * dx    // accumulate x variance
+		sumSqY += dy * dy    // accumulate y variance
+	}
+
+	// Calculate correlation coefficient: r = numerator / √(sumSqX × sumSqY)
+	denominator := math.Sqrt(sumSqX * sumSqY)
+	if denominator == 0 {
+		return math.NaN() // Handle division by zero (perfect constant values)
+	}
+
+	return numerator / denominator
+}
 
 // Function TransformMatrixToSlice takes a symmetrical square matrix as input and flattens
 // it into a single slice of float64 values for return.
@@ -221,12 +255,47 @@ func SortCorrVals(quantileSlice []float64) []float64 {
 // to be analyzed for determining the correlation threshold for edge determination
 func ComputeQuantile(quantileSlice []float64) []float64 {
 
+	// call the CalculateQuantile operation to compute the 90 95 99% quantile probabilities
 	quantileProbability := []float64{0.90, 0.95, 0.99}
 
-	computedQuantiles := stats.Quantiles(quantileSlice, quantileProbability...)
+	computedQuantiles := make([]float64, len(quantileProbability))
+	//compute the 90, 95, and 99 quantile probability
+	for i, p := range quantileProbability {
+		computedQuantiles[i] = CalculateQuantile(quantileSlice, p)
+	}
 
 	return computedQuantiles
-} //prints: [0.5576559638595919 0.6474333018882147 0.779461567805639]
+}
+
+// Function CalculateQuantile computes the quantile (output) for a given probability p (input) from a sorted slice (input)
+func CalculateQuantile(sortedData []float64, p float64) float64 {
+	n := len(sortedData)
+	//check that the data slice is not empty or length 1, if it is then return 0.0 probability
+	if n == 0 {
+		return 0.0
+	}
+	if n == 1 {
+		return sortedData[0]
+	}
+
+	// Calculate the position: (n-1) * p
+	pos := float64(n-1) * p
+
+	// Get the integer and fractional parts
+	lower := int(pos)
+	fraction := pos - float64(lower)
+
+	// Handle edge cases
+	if lower >= n-1 {
+		return sortedData[n-1]
+	}
+	if lower < 0 {
+		return sortedData[0]
+	}
+
+	// Linear interpolation between the two closest values
+	return sortedData[lower] + fraction*(sortedData[lower+1]-sortedData[lower])
+}
 
 // Function BuildGraph takes a correlation matrix as input along with the threshold and sorted list of gene names
 // it ranges over the values and determines if there is an edge between correlated genes based on the computed
@@ -520,17 +589,20 @@ func LargestModule(moduleSizes map[int]int) (int, int) {
 }
 
 // *ChatGPT generated*
-// SummarizeModuleSizes computes basic statistics on module sizes.
+// SummarizeModuleSizes computes comprehensive statistical measures on module (community) sizes using standard descriptive statistics.
+// This function analyzes the distribution of cluster sizes to understand network modularity structure.
 // Inputs:
-//   - moduleSizes: map[communityID]moduleSize
-//   - totalGenes: total number of nodes in the graph (for % calculations)
+//   - moduleSizes: map[communityID]moduleSize - mapping from each community ID to its node count
+//   - totalGenes: total number of nodes in the graph (for percentage calculations)
 //
 // Outputs:
-//   - minSize, maxSize, meanSize, medianSize: module size stats
-//   - numModules: total number of modules
-//   - numSmall: number of modules with size < 5
-//   - largestModuleID: ID of the largest module
-//   - largestPct: % of genes in the largest module
+//   - minSize, maxSize: minimum and maximum module sizes in the network
+//   - meanSize: arithmetic mean μ = (Σxi)/n where xi is size of module i, n is number of modules
+//   - medianSize: middle value when module sizes are sorted; for even n: median = (x[n/2-1] + x[n/2])/2
+//   - numModules: total count of distinct modules/communities
+//   - numSmall: count of modules with size < 5 (small module threshold)
+//   - largestModuleID: community ID of the module with maximum size
+//   - largestPct: percentage of total genes contained in largest module = (largestSize/totalGenes) × 100
 func SummarizeModuleSizes(
 	moduleSizes map[int]int,
 	totalGenes int,
@@ -541,55 +613,68 @@ func SummarizeModuleSizes(
 	largestPct float64,
 ) {
 	numModules = len(moduleSizes)
+	// Handle edge case: empty module map returns all zero values
 	if numModules == 0 {
 		return
 	}
 
+	// Initialize slice to store all module sizes for median calculation
 	sizes := make([]int, 0, numModules)
 
-	sum := 0
-	first := true
-	var minSizeInt, maxSizeInt, largestSize int
+	// Initialize variables for statistical calculations
+	sum := 0                                    // Σxi for mean calculation
+	first := true                               // flag for first iteration initialization
+	var minSizeInt, maxSizeInt, largestSize int // tracking min/max and largest module
 
+	// Single pass through moduleSizes map to collect statistics
 	for commID, size := range moduleSizes {
-		sizes = append(sizes, size)
-		sum += size
+		sizes = append(sizes, size) // store for median calculation
+		sum += size                 // accumulate sum for mean: Σxi
 
+		// Initialize or update min/max tracking on first iteration
 		if first {
 			minSizeInt = size
 			maxSizeInt = size
-			largestModuleID = commID
+			largestModuleID = commID // track ID of largest module
 			largestSize = size
 			first = false
 		} else {
+			// Update minimum module size
 			if size < minSizeInt {
 				minSizeInt = size
 			}
+			// Update maximum module size and largest module tracking
 			if size > maxSizeInt {
 				maxSizeInt = size
-				largestModuleID = commID
+				largestModuleID = commID // update ID of largest module
 				largestSize = size
 			}
 		}
 
+		// Count small modules (size < 5 threshold)
 		if size < 5 {
 			numSmall++
 		}
 	}
 
+	// Convert integer statistics to float64 for output
 	minSize = float64(minSizeInt)
 	maxSize = float64(maxSizeInt)
+	// Calculate arithmetic mean: μ = Σxi/n
 	meanSize = float64(sum) / float64(numModules)
 
-	// median
-	sort.Ints(sizes)
+	// Calculate median: middle value of sorted distribution
+	sort.Ints(sizes) // sort module sizes in ascending order
 	if numModules%2 == 1 {
+		// Odd number of modules: median = middle element
 		medianSize = float64(sizes[numModules/2])
 	} else {
+		// Even number of modules: median = average of two middle elements
 		mid := numModules / 2
 		medianSize = float64(sizes[mid-1]+sizes[mid]) / 2.0
 	}
 
+	// Calculate percentage of genes in largest module
 	if totalGenes > 0 {
 		largestPct = 100.0 * float64(largestSize) / float64(totalGenes)
 	}
@@ -1107,30 +1192,167 @@ func MeanStd(vals []float64) (mean float64, sd float64) {
 // IdentifyHubsByWeightedDegree identifies hub genes in a graph based on weighted degree. It takes as input a
 // graph network struct, #standard of deviations to calculate significance from the mean and outputs a list of
 // gene names, the mean, and standard deviation used for the statistical test.
-func IdentifyHubsByWeightedDegree(graph GraphNetwork, zThreshold float64) ([]string, float64, float64) {
-	// 1) Weighted degrees
-	weightedDegrees := ComputeWeightedDegrees(graph)
 
-	// 2) Find the mean and standard deviation
-	mean, sd := MeanStd(weightedDegrees)
+	func IdentifyHubsByWeightedDegree(graph GraphNetwork, zThreshold float64) ([]string, float64, float64) {
+		// 1) Weighted degrees
+		weightedDegrees := ComputeWeightedDegrees(graph)
 
-	// Edge case: if sd == 0, all nodes have same degree then there are no hubs in this case
-	if sd == 0 {
-		return nil, mean, sd
+		// 2) Find the mean and standard deviation
+		mean, sd := MeanStd(weightedDegrees)
+
+		// Edge case: if sd == 0, all nodes have same degree then there are no hubs in this case
+		if sd == 0 {
+			return nil, mean, sd
+		}
+
+		// 3) Find hubs: z >= zThreshold
+		hubGenes := make([]string, 0)
+
+		for i, wd := range weightedDegrees {
+			//Compute z-score for each node: z = (wd - mean) / sd.
+			z := (wd - mean) / sd
+			if z >= zThreshold {
+				// get gene name from graph node
+				hubGenes = append(hubGenes, graph[i].GeneName)
+			}
+		}
+
+		return hubGenes, mean, sd
 	}
+*/
+// Function RandomGraphGenerator creates a random graph using the Erdős-Rényi G(n,p) model.
+// For each possible pair of nodes (genes), an edge is included independently with probability pVal.
+// The algorithm examines all (n choose 2) = n(n-1)/2 possible edges and includes each with fixed probability p.
+// This generates an undirected, unweighted random graph following the G(n,p) distribution.
+// Inputs: geneNames (slice of gene names for node labels), pVal (edge creation probability)
+// Outputs: random GraphNetwork with randomly connected genes where each edge has weight 1.0
+func RandomGraphGenerator(geneNames []string, pVal float64) GraphNetwork {
+	n := len(geneNames)
 
-	// 3) Find hubs: z >= zThreshold
-	hubGenes := make([]string, 0)
-
-	for i, wd := range weightedDegrees {
-		//Compute z-score for each node: z = (wd - mean) / sd.
-		z := (wd - mean) / sd
-		if z >= zThreshold {
-			// get gene name from graph node
-			hubGenes = append(hubGenes, graph[i].GeneName)
+	// Initialize nodes for the random graph
+	graph := make(GraphNetwork, n)
+	// Create new pointer nodes for every gene in this network
+	for i := 0; i < n; i++ {
+		graph[i] = &Node{
+			ID:       i,
+			GeneName: geneNames[i],
+			Edges:    []*Edge{},
 		}
 	}
 
-	return hubGenes, mean, sd
+	// Iterate over all possible unordered pairs of nodes (i,j)
+	// For each pair, include an edge with probability pVal
+	for i := 0; i < n; i++ {
+		for j := i + 1; j < n; j++ {
+			if rand.Float64() < pVal { // edge created with probability pVal
+				u := graph[i]
+				v := graph[j]
+
+				// Create undirected edge: add edge in both directions with weight 1.0
+				e1 := &Edge{To: v, Weight: 1.0}
+				e2 := &Edge{To: u, Weight: 1.0}
+				//add the edge to that node's edge list
+				u.Edges = append(u.Edges, e1)
+				v.Edges = append(v.Edges, e2)
+			}
+		}
+	}
+	//return the random graph
+	return graph
 }
-*/
+
+// Function calculateECDF calculates the Empirical Cumulative Distribution Function (ECDF) value
+// for a given sample (distribution) at a specific point x using the formula: ECDF(x) = (number of values ≤ x) / n
+func calculateECDF(sample []float64, x float64) float64 {
+	count := 0
+	//range over the sample and count the number of values that are <= x
+	for _, value := range sample {
+		if value <= x {
+			count++
+		}
+	}
+	//divide the count by total sample size for the Empirical CDF
+	return float64(count) / float64(len(sample))
+}
+
+// Function KSTwoSampleStatistic calculates the Kolmogorov-Smirnov D statistic for two samples
+// using the formula: D = max|F₁(x) - F₂(x)| where F₁ and F₂ are empirical CDFs
+func KSTwoSampleStatistic(sample1, sample2 []float64) float64 {
+
+	length1 := len(sample1)
+	length2 := len(sample2)
+	combinedLength := length1 + length2
+
+	// Combine both lists
+	combined := make([]float64, 0, combinedLength)
+	combined = append(combined, sample1...)
+	combined = append(combined, sample2...)
+
+	//Sort the combined list
+	sort.Float64s(combined)
+
+	// Remove duplicates from combined slice to only check unique points
+	uniqueCombined := make([]float64, 0, len(combined))
+	//add the first value to the unique list
+	uniqueCombined = append(uniqueCombined, combined[0])
+	//range through the combined list and if the value is not equal to the previous one,
+	//then it is not a duplicate and you can add it to unique list
+	for i := 1; i < len(combined); i++ {
+		if combined[i] != combined[i-1] {
+			uniqueCombined = append(uniqueCombined, combined[i])
+		}
+	}
+
+	// Find maximum absolute difference between empirical CDFs
+	maxD := 0.0
+	//calculate the empirical CDF for every value in the unique list
+	for _, x := range uniqueCombined {
+		ecdf1 := calculateECDF(sample1, x)
+		ecdf2 := calculateECDF(sample2, x)
+		//calculate the absolute value of the difference between the CDFs
+		d := math.Abs(ecdf1 - ecdf2)
+		//find the maximum difference
+		if d > maxD {
+			maxD = d
+		}
+	}
+
+	//maximum difference between empirical CDFs = Dstatistic
+	return maxD
+}
+
+// Function KSTest performs the two-sample Kolmogorov-Smirnov test to determine if two datasets
+// come from the same underlying distribution using the KS test statistic:
+// D = max|F₁(x) - F₂(x)| where F₁ and F₂ are the empirical cumulative distribution functions
+// The p-value is computed using the infinite series formula: p = 2*∑[k=1 to ∞] (-1)^(k-1)*e^(-2k² * λ²)
+// where λ = √(neff) * D and neff = (n₁ × n₂)/(n₁ + n₂)
+// Inputs: dataset1, dataset2 - two slices of float64 values to compare
+// Outputs: dStatistic (KS test statistic), pValue (probability of observing this difference under null hypothesis)
+func KSTest(dataset1, dataset2 []float64) (float64, float64) {
+
+	// Calculate KS test statistic
+	dStatistic := KSTwoSampleStatistic(dataset1, dataset2)
+
+	// Calculate the effective sample size
+	m := float64(len(dataset1)*len(dataset2)) / float64(len(dataset1)+len(dataset2))
+
+	//Calculate lamda: λ=sqrt(neff​)*dStatistic
+	lambda := math.Sqrt(m) * dStatistic
+
+	//compute pvalue from formula: p=2*∑​(−1)^(k−1)*e^(−2k^2 * λ^2)
+	sum := 0.0
+	for k := 1; k <= 100; k++ {
+		term := math.Pow(-1, float64(k-1)) * math.Exp(-2.0*float64(k*k)*lambda*lambda)
+		sum += term
+	}
+
+	pValue := 2.0 * sum
+
+	// Ensure p-value is positive
+	if pValue < 0 {
+		pValue = 0.0
+	}
+
+	//return the D statistic and p value
+	return dStatistic, pValue
+}

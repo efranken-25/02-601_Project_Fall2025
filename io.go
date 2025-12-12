@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/csv"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"path/filepath"
@@ -334,5 +335,242 @@ func WriteNodeStatsCSV(
 		}
 	}
 
+	return nil
+}
+
+func SaveMatrixAsCSV(filename string, matrix [][]float64, rowNames []string, colNames []string) error {
+	// Create the file
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	// Write header (optional)
+	header := append([]string{""}, colNames...)
+	if err := writer.Write(header); err != nil {
+		return err
+	}
+
+	// Write each row
+	for i, row := range matrix {
+		strRow := make([]string, len(row)+1)
+		strRow[0] = rowNames[i] // row name
+		for j, val := range row {
+			strRow[j+1] = strconv.FormatFloat(val, 'f', 6, 64) // 6 decimal places
+		}
+		if err := writer.Write(strRow); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func SaveLargestModule(graph []*Node, clusterMap map[int]int, outFileName string) {
+	// 1. Count module sizes
+	moduleSizes := make(map[int]int)
+	for _, node := range graph {
+		comm := clusterMap[node.ID]
+		moduleSizes[comm]++
+	}
+
+	// 2. Find largest module
+	largestComm, _ := LargestModule(moduleSizes)
+
+	// 3. Extract nodes in largest module
+	var largestModule []*Node
+	for _, node := range graph {
+		if clusterMap[node.ID] == largestComm {
+			largestModule = append(largestModule, node)
+		}
+	}
+
+	// 4. Save to CSV
+	out, err := os.Create(outFileName)
+	if err != nil {
+		log.Fatalf("Error creating %s: %v", outFileName, err)
+	}
+	defer out.Close()
+
+	writer := csv.NewWriter(out)
+	defer writer.Flush()
+
+	// Write header
+	writer.Write([]string{"ID", "GeneName", "Community"})
+
+	// Write rows
+	for _, node := range largestModule {
+		writer.Write([]string{
+			fmt.Sprintf("%d", node.ID),
+			node.GeneName,
+			fmt.Sprintf("%d", largestComm),
+		})
+	}
+
+	fmt.Printf("Saved largest module → %s\n", outFileName)
+}
+
+func SaveModulesInSizeRange(inputFile string, outputDir string, minSize, maxSize int) error {
+	// open CSV
+	file, err := os.Open(inputFile)
+	if err != nil {
+		return fmt.Errorf("failed to open %s: %v", inputFile, err)
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		return fmt.Errorf("failed to read CSV: %v", err)
+	}
+
+	if len(records) < 2 {
+		return fmt.Errorf("CSV missing header or data")
+	}
+
+	header := records[0]
+
+	// build map[moduleID] -> rows
+	modules := make(map[string][][]string)
+	for _, row := range records[1:] {
+		if len(row) < 3 {
+			continue
+		}
+		moduleID := strings.TrimSpace(row[2])
+		modules[moduleID] = append(modules[moduleID], row)
+	}
+
+	fmt.Println("=== Module Sizes ===")
+	for moduleID, rows := range modules {
+		fmt.Printf("Module %s → %d genes\n", moduleID, len(rows))
+	}
+	fmt.Println("====================")
+
+	fmt.Printf("Searching for modules with size between %d and %d...\n", minSize, maxSize)
+
+	foundAny := false
+
+	for moduleID, rows := range modules {
+		size := len(rows)
+		if size < minSize || size > maxSize {
+			continue
+		}
+
+		foundAny = true
+
+		outFileName := fmt.Sprintf("%s/module_%s_size_%d.csv", outputDir, moduleID, size)
+		outFile, err := os.Create(outFileName)
+		if err != nil {
+			return fmt.Errorf("could not create %s: %v", outFileName, err)
+		}
+
+		writer := csv.NewWriter(outFile)
+		defer outFile.Close()
+		defer writer.Flush()
+
+		if err := writer.Write(header); err != nil {
+			return fmt.Errorf("failed to write header: %v", err)
+		}
+
+		for _, row := range rows {
+			if err := writer.Write(row); err != nil {
+				return fmt.Errorf("failed to write row: %v", err)
+			}
+		}
+
+		writer.Flush()
+		fmt.Printf("Saved module %s (size %d) → %s\n", moduleID, size, outFileName)
+	}
+
+	if !foundAny {
+		fmt.Println("No modules matched the selected size range.")
+	}
+
+	return nil
+}
+
+func SaveTopNGenes(graph []*Node, topN int, filename string) error {
+	// sort nodes by number of edges (degree) descending
+	sort.Slice(graph, func(i, j int) bool {
+		return len(graph[i].Edges) > len(graph[j].Edges)
+	})
+
+	if len(graph) < topN {
+		topN = len(graph)
+	}
+	topNodes := graph[:topN]
+
+	// create CSV file
+	file, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("failed to create CSV: %v", err)
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	// write header
+	writer.Write([]string{"ID", "GeneName", "Degree"})
+
+	// write top nodes
+	for _, node := range topNodes {
+		degree := len(node.Edges)
+		writer.Write([]string{
+			fmt.Sprintf("%d", node.ID),
+			node.GeneName,
+			fmt.Sprintf("%d", degree),
+		})
+	}
+
+	fmt.Printf("Top %d genes saved to %s\n", topN, filename)
+	return nil
+}
+
+func SaveEdgeCounts(nodes []*Node, topN int, filename string) error {
+	if len(nodes) < topN {
+		topN = len(nodes)
+	}
+
+	topNodes := nodes[:topN]
+
+	posEdges := 0
+	negEdges := 0
+
+	for _, node := range topNodes {
+		for _, edge := range node.Edges {
+			// Count each edge only once if undirected
+			if node.ID < edge.To.ID {
+				if edge.Weight > 0 {
+					posEdges++
+				} else if edge.Weight < 0 {
+					negEdges++
+				}
+			}
+		}
+	}
+
+	// Save to CSV
+	outFile, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("error creating CSV: %v", err)
+	}
+	defer outFile.Close()
+
+	writer := csv.NewWriter(outFile)
+	defer writer.Flush()
+
+	// Write header
+	writer.Write([]string{"EdgeType", "Count"})
+
+	// Write positive and negative counts
+	writer.Write([]string{"Positive", strconv.Itoa(posEdges)})
+	writer.Write([]string{"Negative", strconv.Itoa(negEdges)})
+
+	fmt.Printf("CSV saved as %s\n", filename)
 	return nil
 }
