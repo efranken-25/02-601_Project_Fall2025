@@ -2519,3 +2519,9 @@ func ReadComputeDegreesTests(directory string) []ComputeDegreesTest {
 
 	return tests
 }
+
+//KS Test Testing Code
+
+//KSTwoSampleStatistic Testing Code
+
+//calculateECDF testing code

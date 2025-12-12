@@ -169,8 +169,8 @@ server <- function(input, output, session) {
     
     status("Running Go pipeline (this may take ~10–30 seconds)...")
     
-    go_exe   <- "/Users/emmafranken/02-601_Project_Fall2025/"
-    base_dir <- "/Users/emmafranken/02-601_Project_Fall2025/ShinyApp/"
+    go_exe   <- "/Users/emmafranken/02-601_Project_Fall2025/02-601_Project_Fall2025-exe"
+    base_dir <- "/Users/emmafranken/02-601_Project_Fall2025//ShinyApp"
     
     if (!file.exists(go_exe)) {
       status("Error: Go executable not found.")
