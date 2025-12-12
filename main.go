@@ -23,7 +23,7 @@ const (
 
 func main() {
 	// Parse command-line arguments - simple approach
-	arg := 2 // default to both datasets
+	arg := 1 // default to both datasets
 	if len(os.Args) > 1 {
 		if argValue, err := strconv.Atoi(os.Args[1]); err == nil {
 			arg = argValue
@@ -540,6 +540,41 @@ func main() {
 			panic(errONode)
 		}
 
+		/////////////// Largest Module Heatmap ////////////
+		// grabs largest module and saves data in .csv file
+		SaveLargestModule(OvarianGraph, ovarianClusterMap, "largest_module_ovarian.csv")
+
+		///save Correlation Matrix in .csv/////////
+		errCorrMatrixO := SaveMatrixAsCSV("ExtraData/OvarianPearsonCorrelationMatrix.csv",
+			OvarianPearsonCorrelationMatrix, ovarianGeneNames, ovarianGeneNames)
+
+		if errCorrMatrixO != nil {
+			fmt.Println("Error saving ovarian Pearson matrix:", errCorrMatrixO)
+		} else {
+			fmt.Println("Ovarian Pearson correlation matrix saved.")
+		}
+
+		///////// Save OVARIAN module within 400-550 genes ///////////
+		inputCSVO := "ShinyApp/dataset2_nodes_communities.csv"
+		outputDirO := "ExtraData"
+		minSize := 400
+		maxSize := 550
+
+		if errModuleInRangeO := SaveModulesInSizeRange(inputCSVO, outputDirO, minSize, maxSize); errModuleInRangeO != nil {
+			log.Fatalf("Error: %v", errModuleInRangeO)
+		}
+
+		///get top 200 genes///
+		errSTopNodesO := SaveTopNGenes(OvarianGraph, 100, "top_100_genes_ovarian.csv")
+		if errSTopNodesO != nil {
+			log.Fatalf("Error: %v", errSTopNodesO)
+		}
+
+		// Call the subroutine to save edge counts for top 200 genes
+		errCEdgesO := SaveEdgeCounts(OvarianGraph, 100, "top100_edge_counts_ovarian.csv")
+		if errCEdgesO != nil {
+			fmt.Println("Error:", errCEdgesO)
+		}
 	}
 
 	fmt.Printf("Writing %s gene network information to CSV files...\n", dataset1Label)
@@ -576,6 +611,45 @@ func main() {
 
 	if errBNode != nil {
 		panic(errBNode)
+	}
+
+	/////////////// Largest Module Heatmap ////////////
+	// grabs largest module and saves data in .csv file
+	SaveLargestModule(BreastGraph, breastClusterMap, "largest_module.csv")
+
+	///save Correlation Matrix in .csv/////////
+	//breast (dataset1)
+	errCorrMatrixB := SaveMatrixAsCSV("BreastPearsonCorrelationMatrix.csv",
+		BreastPearsonCorrelationMatrix, breastGeneNames, breastGeneNames)
+
+	///save Correlation Matrix in .csv/////////
+	if errCorrMatrixB != nil {
+		fmt.Println("Error saving Pearson matrix:", errCorrMatrixB)
+	} else {
+		fmt.Println("Pearson correlation matrix saved.")
+	}
+
+	//////// Save module within 400-550 genes ///////////
+	// Breast - Read node–community CSV
+	inputCSV := "ShinyApp/dataset1_nodes_communities.csv"
+	outputDir := "ExtraData"
+	minSize := 350
+	maxSize := 550
+
+	if errModuleInRange := SaveModulesInSizeRange(inputCSV, outputDir, minSize, maxSize); errModuleInRange != nil {
+		log.Fatalf("Error: %v", errModuleInRange)
+	}
+
+	//return top 200 genes based on degree
+	errSTopNodes := SaveTopNGenes(BreastGraph, 100, "top_100_genes_breast.csv")
+	if errSTopNodes != nil {
+		log.Fatalf("Error: %v", errSTopNodes)
+	}
+
+	// Call the subroutine to save edge counts for top 200 genes
+	errCEdges := SaveEdgeCounts(BreastGraph, 100, "top100_edge_counts_breast.csv")
+	if errCEdges != nil {
+		fmt.Println("Error:", errCEdges)
 	}
 
 }

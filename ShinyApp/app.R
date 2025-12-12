@@ -48,23 +48,20 @@ ui <- fluidPage(
   div(
     style = "text-align: left; margin-left: 20px;",
     
-    # Title
     tags$h2("Gene Co-expression Network Explorer"),
     
-    # Subtitle
     tags$h5(
       style = "color:#666; margin-top:-5px;",
       "Powered by Louvain Community Detection"
     ),
     
-    # Watermark image placed under subtitle
     tags$img(
       src = "watermark.png",
       style = "
         display: block;
         margin-top: 10px;
-        margin-left: 90px;   /* shift left or right */
-        width: 150px;        /* shrink size here */
+        margin-left: 90px;
+        width: 150px;
       "
     )
   ),
@@ -98,8 +95,8 @@ ui <- fluidPage(
       
       tags$hr(),
       
-      # Edge sign section
-      h4("Select edges (positive or negative"),
+      # Edge sign
+      h4("Select edges (positive or negative)"),
       checkboxInput("edge_pos", "Positive (r > 0)", value = TRUE),
       checkboxInput("edge_neg", "Negative (r < 0)", value = TRUE),
       
@@ -121,11 +118,12 @@ ui <- fluidPage(
       checkboxInput(
         "color_nodes_comm",
         "Color nodes by Louvain community",
-        value = FALSE   # default OFF to avoid rainbow explosion
+        value = FALSE
       ),
       
-      h4("Community Selection"),
+      tags$hr(),
       
+      h4("Community Selection"),
       tags$small(
         style = "color:#666;",
         "The dropdown lists communities in descending order of density (most dense → least dense)."
@@ -138,7 +136,7 @@ ui <- fluidPage(
         selected = "All"
       ),
       
-      checkboxInput("show_labels", "Show gene labels", TRUE),
+      checkboxInput("show_labels", "Show gene labels", TRUE)
     ),
     
     mainPanel(
@@ -171,7 +169,7 @@ server <- function(input, output, session) {
     base_dir <- here("ShinyApp")  # /Users/bethany/ProgrammingProject/ShinyApp
     
     # Project root (contains ProgrammingProject binary + ShinyApp/)
-    project_dir <- dirname(base_dir)  # /Users/bethany/ProgrammingProject
+    project_dir <- dirname(base_dir)  
     
     # Go executable in the project root
     go_exe <- file.path(project_dir, "02-601_Project_Fall2025")
@@ -301,13 +299,13 @@ server <- function(input, output, session) {
         communities = dataset1_comm,
         comm_stats  = dataset1_stats
       ),
-      dataset2 = list(
-        nodes       = dataset2_nodes,
-        edges       = dataset2_edges,
-        communities = dataset2_comm,
-        comm_stats  = dataset2_stats
+       dataset2 = list(
+         nodes       = dataset2_nodes,
+         edges       = dataset2_edges,
+         communities = dataset2_comm,
+         comm_stats  = dataset2_stats
+       )
       )
-    )
   })
   
   # ------------------- Update community dropdown -------------------
