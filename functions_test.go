@@ -29,16 +29,21 @@ func TestTransformMapToSlice(t *testing.T) {
 	}
 }
 
-// ReadTransformMapToSliceTests reads Input/Output files for TransformMapToSlice tests
+// ReadTransformMapToSliceTests reads test input and output files for TransformMapToSlice function,
+// parsing gene expression data and expected results from the test directory structure.
+// It takes a directory path as input and returns a slice of TransformMapToSliceTest structs.
 func ReadTransformMapToSliceTests(directory string) []TransformMapToSliceTest {
+	// Read all input and output files from test directories
 	inputFiles := ReadDirectory(directory + "/Input")
 	outputFiles := ReadDirectory(directory + "/Output")
 	if len(inputFiles) != len(outputFiles) {
 		panic("number of input and output files do not match")
 	}
 
+	// Initialize slice to store all test cases
 	tests := make([]TransformMapToSliceTest, len(inputFiles))
 
+	// Parse each input file to extract gene expression data
 	for i, inputFile := range inputFiles {
 		f, err := os.Open(directory + "/Input/" + inputFile.Name())
 		if err != nil {
@@ -46,18 +51,22 @@ func ReadTransformMapToSliceTests(directory string) []TransformMapToSliceTest {
 		}
 		scanner := bufio.NewScanner(f)
 
+		// Initialize test structure for current file
 		current := TransformMapToSliceTest{
 			geneExpressionBreastMap: make(map[string]map[string]float64),
 		}
 		var currentMapKey string
 
+		// Parse each line to build gene expression map
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
+			// Skip empty lines and comments
 			if line == "" || strings.HasPrefix(line, "#") {
 				continue
 			}
 
 			switch {
+			// Parse gene name and initialize its expression map
 			case strings.HasPrefix(line, "geneName:"):
 				current.geneName = strings.TrimSpace(strings.TrimPrefix(line, "geneName:"))
 				current.geneExpressionBreastMap[current.geneName] = make(map[string]float64)
@@ -86,16 +95,18 @@ func ReadTransformMapToSliceTests(directory string) []TransformMapToSliceTest {
 		tests[i] = current
 	}
 
-	// read output files
+	// Parse output files to get expected results
 	for i, outputFile := range outputFiles {
 		f, err := os.Open(directory + "/Output/" + outputFile.Name())
 		if err != nil {
 			panic(err)
 		}
 		scanner := bufio.NewScanner(f)
+		// Collect expected float values from output file
 		outputVals := []float64{}
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
+			// Skip empty lines and comments
 			if line == "" || strings.HasPrefix(line, "#") {
 				continue
 			}
@@ -135,6 +146,9 @@ func TestGetSampleNames(t *testing.T) {
 	}
 }
 
+// ReadGetSampleNamesTests loads test cases for GetSampleNames function by parsing input files containing
+// gene expression maps and output files containing expected sample name lists.
+// It takes a directory path as input and returns a slice of GetSampleNamesTest structs.
 func ReadGetSampleNamesTests(directory string) []GetSampleNamesTest {
 	inputFiles := ReadDirectory(directory + "/Input")
 	outputFiles := ReadDirectory(directory + "/Output")
@@ -223,6 +237,7 @@ type GetGeneNamesTest struct {
 	result                  []string
 }
 
+// TestGetGeneNames tests the GetGeneNames function.
 func TestGetGeneNames(t *testing.T) {
 	tests := ReadGetGeneNamesTests("Tests/GetGeneNames")
 	for _, test := range tests {
@@ -234,6 +249,9 @@ func TestGetGeneNames(t *testing.T) {
 	}
 }
 
+// ReadGetGeneNamesTests reads test data for GetGeneNames function from input files with gene expression data
+// and output files with expected sorted gene name lists.
+// It takes a directory path as input and returns a slice of GetGeneNamesTest structs.
 func ReadGetGeneNamesTests(directory string) []GetGeneNamesTest {
 	inputFiles := ReadDirectory(directory + "/Input")
 	outputFiles := ReadDirectory(directory + "/Output")
@@ -324,6 +342,7 @@ type MeanBasedFilterTest struct {
 	result                  ExpressionMap
 }
 
+// TestMeanBasedFilter tests the MeanBasedFilter function.
 func TestMeanBasedFilter(t *testing.T) {
 	tests := ReadMeanBasedFilterTests("Tests/MeanBasedFilter")
 	for _, test := range tests {
@@ -335,6 +354,9 @@ func TestMeanBasedFilter(t *testing.T) {
 	}
 }
 
+// ReadMeanBasedFilterTests loads test cases for MeanBasedFilter function by parsing input files containing
+// gene expression data and thresholds, and output files with filtered results.
+// It takes a directory path as input and returns a slice of MeanBasedFilterTest structs.
 func ReadMeanBasedFilterTests(directory string) []MeanBasedFilterTest {
 	inputFiles := ReadDirectory(directory + "/Input")
 	outputFiles := ReadDirectory(directory + "/Output")
@@ -344,6 +366,7 @@ func ReadMeanBasedFilterTests(directory string) []MeanBasedFilterTest {
 
 	tests := make([]MeanBasedFilterTest, len(inputFiles))
 
+	// Parse input files containing gene expression data and filter parameters
 	for i, inputFile := range inputFiles {
 		f, err := os.Open(directory + "/Input/" + inputFile.Name())
 		if err != nil {
@@ -351,22 +374,27 @@ func ReadMeanBasedFilterTests(directory string) []MeanBasedFilterTest {
 		}
 		scanner := bufio.NewScanner(f)
 
+		// Initialize test structure for MeanBasedFilter
 		current := MeanBasedFilterTest{
 			geneExpressionBreastMap: make(ExpressionMap),
 		}
 		var currentMapKey string
 
+		// Parse structured input with genes, samples, threshold, and expression data
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
+			// Skip empty lines and comments
 			if line == "" || strings.HasPrefix(line, "#") {
 				continue
 			}
 
 			switch {
+			// Parse gene name and initialize its expression map
 			case strings.HasPrefix(line, "geneName:"):
 				currentMapKey = strings.TrimSpace(strings.TrimPrefix(line, "geneName:"))
 				current.geneExpressionBreastMap[currentMapKey] = make(map[string]float64)
 
+			// Parse sample names list
 			case strings.HasPrefix(line, "samples:"):
 				sampleStr := strings.TrimSpace(strings.TrimPrefix(line, "samples:"))
 				current.samples = []string{}
@@ -374,6 +402,7 @@ func ReadMeanBasedFilterTests(directory string) []MeanBasedFilterTest {
 					current.samples = append(current.samples, strings.TrimSpace(s))
 				}
 
+			// Parse mean threshold for filtering
 			case strings.HasPrefix(line, "meanThresh:"):
 				threshStr := strings.TrimSpace(strings.TrimPrefix(line, "meanThresh:"))
 				thresh, err := strconv.ParseFloat(threshStr, 64)
@@ -453,6 +482,7 @@ type SortSampleNamesTest struct {
 	result  []string
 }
 
+// TestSortSampleNames tests the sortSampleNames function.
 func TestSortSampleNames(t *testing.T) {
 	tests := ReadSortSampleNamesTests("Tests/SortSampleNames")
 	for _, test := range tests {
@@ -468,6 +498,9 @@ func TestSortSampleNames(t *testing.T) {
 	}
 }
 
+// ReadSortSampleNamesTests reads test data for the sortSampleNames function by parsing input files with
+// sample name lists and output files with expected sorted order.
+// It takes a directory path as input and returns a slice of SortSampleNamesTest structs.
 func ReadSortSampleNamesTests(directory string) []SortSampleNamesTest {
 	inputFiles := ReadDirectory(directory + "/Input")
 	outputFiles := ReadDirectory(directory + "/Output")
@@ -524,6 +557,7 @@ type ComputePearsonTest struct {
 	result                 CorrelationMatrix
 }
 
+// TestComputePearsonCorrelation tests the ComputePearsonCorrelation function.
 func TestComputePearsonCorrelation(t *testing.T) {
 	tests := ReadComputePearsonTests("Tests/ComputePearsonCorrelation")
 	for _, test := range tests {
@@ -539,7 +573,9 @@ func TestComputePearsonCorrelation(t *testing.T) {
 	}
 }
 
-// ReadComputePearsonTests parses the input/output test files
+// ReadComputePearsonTests loads test cases for ComputePearsonCorrelation function by parsing complex input
+// files containing gene expression data and output files with correlation matrices.
+// It takes a directory path as input and returns a slice of ComputePearsonTest structs.
 func ReadComputePearsonTests(directory string) []ComputePearsonTest {
 	inputFiles := ReadDirectory(directory + "/Input")
 	outputFiles := ReadDirectory(directory + "/Output")
@@ -549,6 +585,7 @@ func ReadComputePearsonTests(directory string) []ComputePearsonTest {
 
 	tests := make([]ComputePearsonTest, len(inputFiles))
 
+	// Parse complex input files containing gene expression data and metadata
 	for i, inputFile := range inputFiles {
 		f, err := os.Open(directory + "/Input/" + inputFile.Name())
 		if err != nil {
@@ -557,24 +594,30 @@ func ReadComputePearsonTests(directory string) []ComputePearsonTest {
 		defer f.Close()
 
 		scanner := bufio.NewScanner(f)
+		// Initialize test structure with gene expression map
 		current := ComputePearsonTest{
 			filteredGeneExpression: make(ExpressionMap),
 		}
 		var currentGene string
+		// Parse structured input format with sections for genes, samples, and expression data
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
 			if line == "" {
 				continue
 			}
 			switch {
+			// Extract sorted gene names from header
 			case strings.HasPrefix(line, "geneNames:"):
 				current.sortedGeneNames = strings.Fields(strings.TrimPrefix(line, "geneNames:"))
+			// Extract sorted sample names from header
 			case strings.HasPrefix(line, "sampleNames:"):
 				current.sortedSampleNames = strings.Fields(strings.TrimPrefix(line, "sampleNames:"))
+			// Start of gene expression block
 			case strings.HasSuffix(line, "{"):
 				parts := strings.Fields(line)
 				currentGene = parts[0]
 				current.filteredGeneExpression[currentGene] = make(map[string]float64)
+			// End of gene expression block
 			case line == "}":
 				currentGene = ""
 			default:
@@ -644,7 +687,9 @@ func TestTransformMatrixToSlice(t *testing.T) {
 	}
 }
 
-// ReadTransformMatrixToSliceTests reads Input/Output files for matrix tests
+// ReadTransformMatrixToSliceTests reads test data for TransformMatrixToSlice function by parsing input files
+// containing correlation matrices and output files with flattened value arrays.
+// It takes a directory path as input and returns a slice of TransformMatrixToSliceTest structs.
 func ReadTransformMatrixToSliceTests(directory string) []TransformMatrixToSliceTest {
 	inputFiles := ReadDirectory(directory + "/Input")
 	outputFiles := ReadDirectory(directory + "/Output")
@@ -654,7 +699,7 @@ func ReadTransformMatrixToSliceTests(directory string) []TransformMatrixToSliceT
 
 	tests := make([]TransformMatrixToSliceTest, len(inputFiles))
 
-	//read input files
+	//read input files containing correlation matrices
 	for i, inputFile := range inputFiles {
 		f, err := os.Open(directory + "/Input/" + inputFile.Name())
 		if err != nil {
@@ -662,20 +707,23 @@ func ReadTransformMatrixToSliceTests(directory string) []TransformMatrixToSliceT
 		}
 		scanner := bufio.NewScanner(f)
 
+		// Initialize test structure for matrix transformation
 		current := TransformMatrixToSliceTest{}
 		var matrix CorrelationMatrix
 
+		// Parse matrix data line by line
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
+			// Skip empty lines and comments
 			if line == "" || strings.HasPrefix(line, "#") {
 				continue
 			}
 
-			// Expecting matrix rows like:
-			// 1.0, 0.2, 0.5
+			// Expecting matrix rows like: "1.0, 0.2, 0.5"
 			rowParts := strings.Split(line, ",")
 			row := make([]float64, 0, len(rowParts))
 
+			// Parse each value in the matrix row
 			for _, p := range rowParts {
 				valStr := strings.TrimSpace(p)
 				if valStr == "" {
@@ -688,6 +736,7 @@ func ReadTransformMatrixToSliceTests(directory string) []TransformMatrixToSliceT
 				row = append(row, v)
 			}
 
+			// Add valid rows to the matrix
 			if len(row) > 0 {
 				matrix = append(matrix, row)
 			}
@@ -698,7 +747,7 @@ func ReadTransformMatrixToSliceTests(directory string) []TransformMatrixToSliceT
 		tests[i] = current
 	}
 
-	//read output files
+	//read output files containing expected flattened results
 	for i, outputFile := range outputFiles {
 		f, err := os.Open(directory + "/Output/" + outputFile.Name())
 		if err != nil {
@@ -706,13 +755,16 @@ func ReadTransformMatrixToSliceTests(directory string) []TransformMatrixToSliceT
 		}
 		scanner := bufio.NewScanner(f)
 
+		// Collect expected output values
 		outputVals := []float64{}
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
+			// Skip empty lines and comments
 			if line == "" || strings.HasPrefix(line, "#") {
 				continue
 			}
 
+			// Parse comma-separated float values
 			for _, p := range strings.Split(line, ",") {
 				valStr := strings.TrimSpace(p)
 				if valStr == "" {
@@ -738,6 +790,7 @@ type SortCorrValsTest struct {
 	result        []float64
 }
 
+// TestSortCorrValues tests the SortCorrVals function.
 func TestSortCorrValues(t *testing.T) {
 
 	tests := ReadSortCorrValsTests("Tests/SortCorrVals")
@@ -751,6 +804,9 @@ func TestSortCorrValues(t *testing.T) {
 
 }
 
+// ReadSortCorrValsTests loads test cases for SortCorrVals function by reading input files with unsorted
+// correlation values and output files with sorted results.
+// It takes a directory path as input and returns a slice of SortCorrValsTest structs.
 func ReadSortCorrValsTests(directory string) []SortCorrValsTest {
 	inputFiles := ReadDirectory(directory + "/Input")
 	outputFiles := ReadDirectory(directory + "/Output")
@@ -761,7 +817,7 @@ func ReadSortCorrValsTests(directory string) []SortCorrValsTest {
 
 	tests := make([]SortCorrValsTest, len(inputFiles))
 
-	//read input files
+	//read input files containing unsorted correlation values
 	for i, inputFile := range inputFiles {
 		path := directory + "/Input/" + inputFile.Name()
 		data, err := os.ReadFile(path)
@@ -769,11 +825,12 @@ func ReadSortCorrValsTests(directory string) []SortCorrValsTest {
 			panic(err)
 		}
 
+		// Parse float values from file content
 		vals := ParseFloatList(string(data))
 		tests[i].quantileSlice = vals
 	}
 
-	//read output files
+	//read output files containing expected sorted results
 	for i, outputFile := range outputFiles {
 		path := directory + "/Output/" + outputFile.Name()
 		data, err := os.ReadFile(path)
@@ -781,6 +838,7 @@ func ReadSortCorrValsTests(directory string) []SortCorrValsTest {
 			panic(err)
 		}
 
+		// Parse expected sorted values
 		vals := ParseFloatList(string(data))
 		tests[i].result = vals
 	}
@@ -819,6 +877,9 @@ func TestComputeQuantile(t *testing.T) {
 }
 
 // ReadComputeQuantileTests reads input and output test files from a directory and results a slice of ComputeQuantileTest structs.
+// ReadComputeQuantileTests reads test data for ComputeQuantile function by parsing input files containing
+// correlation data and output files with computed quantile values.
+// It takes a directory path as input and returns a slice of ComputeQuantileTest structs.
 func ReadComputeQuantileTests(directory string) []ComputeQuantileTest {
 	//list all the input and output files from the directory
 	inputFiles := ReadDirectory(directory + "/Input")
@@ -832,7 +893,7 @@ func ReadComputeQuantileTests(directory string) []ComputeQuantileTest {
 	//initialzie a slice to store all of the test cases
 	tests := make([]ComputeQuantileTest, len(inputFiles))
 
-	//Read input files
+	//Read input files containing correlation data for quantile computation
 	for i, inputFile := range inputFiles {
 		path := directory + "/Input/" + inputFile.Name()
 		data, err := os.ReadFile(path)
@@ -843,7 +904,7 @@ func ReadComputeQuantileTests(directory string) []ComputeQuantileTest {
 		tests[i].quantileSlice = ParseFloatList(string(data))
 	}
 
-	//Read output files
+	//Read output files containing expected quantile results
 	for i, outputFile := range outputFiles {
 		path := directory + "/Output/" + outputFile.Name()
 		data, err := os.ReadFile(path)
@@ -888,6 +949,9 @@ func TestBuildGraph(t *testing.T) {
 }
 
 // ReadBuildGraphTests reads input and output tests from a directory.
+// ReadBuildGraphTests loads test cases for BuildGraph function by parsing input files with correlation matrices
+// and thresholds, and output files with expected graph structures.
+// It takes a directory path as input and returns a slice of BuildGraphTest structs.
 func ReadBuildGraphTests(directory string) []BuildGraphTest {
 	inputFiles := ReadDirectory(directory + "/Input")
 	outputFiles := ReadDirectory(directory + "/Output")
@@ -921,17 +985,22 @@ func ReadBuildGraphTests(directory string) []BuildGraphTest {
 	return tests
 }
 
+// parseBuildGraphInput parses a single input string containing correlation matrix and threshold data
+// into a BuildGraphTest structure for graph construction testing.
+// It takes an input data string and returns a BuildGraphTest struct.
 func parseBuildGraphInput(data string) BuildGraphTest {
 	lines := strings.Split(data, "\n")
 	test := BuildGraphTest{}
-	stage := ""
+	stage := "" // Track which section we're currently parsing
 
+	// Parse each line and organize data by section headers
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
 
+		// Check for section headers that define data structure
 		switch line {
 		case "threshold:":
 			stage = "threshold"
@@ -940,15 +1009,19 @@ func parseBuildGraphInput(data string) BuildGraphTest {
 		case "matrix:":
 			stage = "matrix"
 		default:
+			// Process data based on current section
 			switch stage {
 			case "threshold":
+				// Parse threshold value for edge creation
 				val, _ := strconv.ParseFloat(line, 64)
 				test.threshold = val
 
 			case "genes":
+				// Parse comma-separated gene names
 				test.geneNames = strings.Split(line, ",")
 
 			case "matrix":
+				// Parse each matrix row as correlation values
 				row := ParseFloatList(line)
 				test.corrMatrix = append(test.corrMatrix, row)
 			}
@@ -958,26 +1031,35 @@ func parseBuildGraphInput(data string) BuildGraphTest {
 	return test
 }
 
+// parseExpectedEdges parses expected edge data from string format into a map structure
+// representing graph connectivity for test validation.
+// It takes a data string and returns a map representing expected edges.
 func parseExpectedEdges(data string) map[int][]int {
 	result := make(map[int][]int)
 	lines := strings.Split(strings.TrimSpace(data), "\n")
 
+	// Parse each line representing node connections
 	for _, line := range lines {
+		// Split line into node ID and its target connections
 		parts := strings.Split(line, ":")
 		nodeID, _ := strconv.Atoi(parts[0])
 
+		// Handle nodes with no connections (empty target list)
 		if strings.TrimSpace(parts[1]) == "" {
 			result[nodeID] = []int{}
 			continue
 		}
 
+		// Parse comma-separated target node IDs
 		targetsStr := strings.Split(parts[1], ",")
 		var targets []int
 		for _, s := range targetsStr {
+			// Convert each target ID string to integer
 			id, _ := strconv.Atoi(strings.TrimSpace(s))
 			targets = append(targets, id)
 		}
 
+		// Store the list of target nodes for this source node
 		result[nodeID] = targets
 	}
 
@@ -990,8 +1072,9 @@ type BuildLouvainGraphTest struct {
 	ExpectedEdges [][3]float64 // each edge: {u, v, weight}
 }
 
+// TestBuildLouvainGraph tests the BuildLouvainGraph function.
 func TestBuildLouvainGraph(t *testing.T) {
-	// Read all test cases
+	// Read all test cases from input/output directories
 	tests := ReadBuildLouvainGraphTests(
 		"Tests/BuildLouvainGraph/Input",
 		"Tests/BuildLouvainGraph/Output",
@@ -1047,6 +1130,9 @@ func TestBuildLouvainGraph(t *testing.T) {
 	}
 }
 
+// ReadBuildLouvainGraphTests loads test cases for BuildLouvainGraph function by reading correlation matrices
+// from input files and expected edge structures from output files.
+// It takes input and output directory paths and returns a slice of BuildLouvainGraphTest structs.
 func ReadBuildLouvainGraphTests(inputDir, outputDir string) []BuildLouvainGraphTest {
 	inputFiles := ReadDirectory(inputDir)
 	outputFiles := ReadDirectory(outputDir)
@@ -1057,10 +1143,11 @@ func ReadBuildLouvainGraphTests(inputDir, outputDir string) []BuildLouvainGraphT
 
 	var tests []BuildLouvainGraphTest
 
+	// Parse input files containing correlation matrices and thresholds
 	for i := range inputFiles {
 		test := BuildLouvainGraphTest{}
 
-		// parse input files
+		// Read and parse input file structure
 		inPath := filepath.Join(inputDir, inputFiles[i].Name())
 		inData, err := os.ReadFile(inPath)
 		if err != nil {
@@ -1087,19 +1174,23 @@ func ReadBuildLouvainGraphTests(inputDir, outputDir string) []BuildLouvainGraphT
 				}
 				test.Threshold = val
 			case "correlation matrix":
+				// First line contains matrix dimension
 				n, err := strconv.Atoi(line)
 				if err != nil {
 					panic(err)
 				}
+				// Initialize matrix and read n rows of n values each
 				test.Matrix = make([][]float64, n)
 				for r := 0; r < n; r++ {
 					if !scanner.Scan() {
 						panic("unexpected EOF when reading matrix rows")
 					}
+					// Parse each row as space-separated float values
 					rowStr := strings.Fields(scanner.Text())
 					if len(rowStr) != n {
 						panic("matrix row does not match expected dimension")
 					}
+					// Convert string values to float64
 					row := make([]float64, n)
 					for c, s := range rowStr {
 						row[c], err = strconv.ParseFloat(s, 64)
@@ -1134,28 +1225,35 @@ type RunLouvainOnMatrixTest struct {
 	ExpectedComm map[int]int       // expected nodeID -> communityID mapping
 }
 
+// TestRunLouvainOnMatrix tests the RunLouvainOnMatrix function.
 func TestRunLouvainOnMatrix(t *testing.T) {
+	// Load test cases with correlation matrices and expected community assignments
 	tests := ReadRunLouvainOnMatrixTests(
 		"Tests/RunLouvainOnMatrix/Input",
 		"Tests/RunLouvainOnMatrix/Output",
 	)
 
 	for _, test := range tests {
+		// First build the Louvain graph from correlation matrix
 		graph := BuildLouvainGraph(test.Matrix, test.Threshold)
+		// Run clustering algorithm to get community assignments and modularity
 		gotComm, gotMod := RunLouvainOnMatrix(graph)
 
-		// Ensure modularity is in a reasonable range
+		// Ensure modularity is in a reasonable range [-1, 1]
 		if gotMod < -1 || gotMod > 1 {
 			t.Errorf("modularity out of expected range: %.6f", gotMod)
 		}
 
-		// Compare communities: allow relabeling
+		// Compare communities: allow relabeling since community IDs can vary
 		if !CompareCommunities(gotComm, test.ExpectedComm) {
 			t.Errorf("community assignment mismatch.\nGot: %v\nWant: %v", gotComm, test.ExpectedComm)
 		}
 	}
 }
 
+// ReadRunLouvainOnMatrixTests reads test data for RunLouvainOnMatrix function by parsing input files with
+// graph data and output files with expected community assignments and modularity values.
+// It takes input and output directory paths and returns a slice of RunLouvainOnMatrixTest structs.
 func ReadRunLouvainOnMatrixTests(inputDir, outputDir string) []RunLouvainOnMatrixTest {
 	inputFiles := ReadDirectory(inputDir)
 	outputFiles := ReadDirectory(outputDir)
@@ -1272,6 +1370,7 @@ type CountCommunitiesTest struct {
 	Expected     int
 }
 
+// TestCountCommunities tests the CountCommunities function.
 func TestCountCommunities(t *testing.T) {
 	tests := ReadCountCommunitiesTests("Tests/CountCommunities")
 
@@ -1284,6 +1383,9 @@ func TestCountCommunities(t *testing.T) {
 	}
 }
 
+// ReadCountCommunitiesTests loads test cases for CountCommunities function by parsing files containing
+// community assignments and expected community count values.
+// It takes a directory path as input and returns a slice of CountCommunitiesTest structs.
 func ReadCountCommunitiesTests(dir string) []CountCommunitiesTest {
 	files, err := os.ReadDir(dir)
 	if err != nil {
@@ -1350,6 +1452,7 @@ type CalculateNumEdgesTest struct {
 	Expected int
 }
 
+// TestCalculateNumEdges tests the CalculateNumEdges function.
 func TestCalculateNumEdges(t *testing.T) {
 	tests := ReadCalculateNumEdgesTests(
 		"Tests/CalculateNumEdges/Input",
@@ -1365,6 +1468,9 @@ func TestCalculateNumEdges(t *testing.T) {
 	}
 }
 
+// ReadCalculateNumEdgesTests reads test data for CalculateNumEdges function by constructing graph networks
+// from input files and reading expected edge counts from output files.
+// It takes input and output directory paths and returns a slice of CalculateNumEdgesTest structs.
 func ReadCalculateNumEdgesTests(inputDir, outputDir string) []CalculateNumEdgesTest {
 	inputFiles, err := os.ReadDir(inputDir)
 	if err != nil {
@@ -1382,8 +1488,9 @@ func ReadCalculateNumEdgesTests(inputDir, outputDir string) []CalculateNumEdgesT
 
 	tests := make([]CalculateNumEdgesTest, len(inputFiles))
 
+	// Parse input files to construct graph networks
 	for i, inputFile := range inputFiles {
-		// Open input file
+		// Open input file containing graph structure
 		path := filepath.Join(inputDir, inputFile.Name())
 		file, err := os.Open(path)
 		if err != nil {
@@ -1394,13 +1501,15 @@ func ReadCalculateNumEdgesTests(inputDir, outputDir string) []CalculateNumEdgesT
 		nodeLines := []string{}
 		maxNodeID := -1
 
-		// First, read all lines to determine the number of nodes
+		// First pass: read all lines and find maximum node ID
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
+			// Skip empty lines and comments
 			if line == "" || strings.HasPrefix(line, "#") {
 				continue
 			}
 			nodeLines = append(nodeLines, line)
+			// Extract node ID to determine graph size
 			parts := strings.Fields(line)
 			nodeID, _ := strconv.Atoi(parts[0])
 			if nodeID > maxNodeID {
@@ -1409,7 +1518,7 @@ func ReadCalculateNumEdgesTests(inputDir, outputDir string) []CalculateNumEdgesT
 		}
 		file.Close()
 
-		// Initialize all nodes
+		// Initialize graph with all nodes (create empty nodes first)
 		numNodes := maxNodeID + 1
 		graph := make(GraphNetwork, numNodes)
 		for j := 0; j < numNodes; j++ {
@@ -1420,12 +1529,14 @@ func ReadCalculateNumEdgesTests(inputDir, outputDir string) []CalculateNumEdgesT
 			}
 		}
 
-		// Parse each line and assign edges
+		// Second pass: parse each line and populate node data and edges
 		for _, line := range nodeLines {
 			parts := strings.Fields(line)
 			nodeID, _ := strconv.Atoi(parts[0])
+			// Set gene name for this node
 			graph[nodeID].GeneName = parts[1]
 
+			// Parse edges if they exist (format: "toID:weight,toID:weight")
 			if len(parts) >= 3 {
 				edges := strings.Split(parts[2], ",")
 				for _, e := range edges {
@@ -1433,6 +1544,7 @@ func ReadCalculateNumEdgesTests(inputDir, outputDir string) []CalculateNumEdgesT
 					if len(edgeParts) != 2 {
 						continue
 					}
+					// Create edge with target node and weight
 					toID, _ := strconv.Atoi(edgeParts[0])
 					weight, _ := strconv.ParseFloat(edgeParts[1], 64)
 					edge := &Edge{
@@ -1471,6 +1583,7 @@ type ComputeAverageDegreeTest struct {
 }
 
 // TestComputeAverageDegree runs tests for ComputeAverageDegree
+// TestComputeAverageDegree tests the ComputeAverageDegree function.
 func TestComputeAverageDegree(t *testing.T) {
 	tests := ReadComputeAverageDegreeTests("Tests/ComputeAverageDegree")
 
@@ -1488,6 +1601,9 @@ func TestComputeAverageDegree(t *testing.T) {
 	}
 }
 
+// ReadComputeAverageDegreeTests loads test cases for ComputeAverageDegree function by parsing input files
+// with node and edge counts and output files with expected average degree values.
+// It takes a directory path as input and returns a slice of ComputeAverageDegreeTest structs.
 func ReadComputeAverageDegreeTests(directory string) []ComputeAverageDegreeTest {
 	inputFiles := ReadDirectory(directory + "/Input")
 	outputFiles := ReadDirectory(directory + "/Output")
@@ -1546,6 +1662,7 @@ type ComputeEdgeDensityTest struct {
 }
 
 // TestComputeEdgeDensity runs tests for ComputeEdgeDensity
+// TestComputeEdgeDensity tests the ComputeEdgeDensity function.
 func TestComputeEdgeDensity(t *testing.T) {
 	tests := ReadComputeEdgeDensityTests("Tests/ComputeEdgeDensity")
 
@@ -1563,6 +1680,9 @@ func TestComputeEdgeDensity(t *testing.T) {
 	}
 }
 
+// ReadComputeEdgeDensityTests reads test data for ComputeEdgeDensity function by parsing input files
+// containing graph parameters and output files with expected density calculations.
+// It takes a directory path as input and returns a slice of ComputeEdgeDensityTest structs.
 func ReadComputeEdgeDensityTests(directory string) []ComputeEdgeDensityTest {
 	inputFiles := ReadDirectory(directory + "/Input")
 	outputFiles := ReadDirectory(directory + "/Output")
@@ -1620,6 +1740,7 @@ type EdgeStatsTest struct {
 	ExpectedNeg int
 }
 
+// TestEdgeStats tests the EdgeStats function.
 func TestEdgeStats(t *testing.T) {
 	tests := ReadEdgeStatsTests("Tests/EdgeStats")
 
@@ -1633,6 +1754,9 @@ func TestEdgeStats(t *testing.T) {
 	}
 }
 
+// ReadEdgeStatsTests loads test cases for EdgeStats function by parsing input files with graph network
+// data and output files containing positive/negative edge counts.
+// It takes a directory path as input and returns a slice of EdgeStatsTest structs.
 func ReadEdgeStatsTests(directory string) []EdgeStatsTest {
 	inputFiles := ReadDirectory(directory + "/Input")
 	outputFiles := ReadDirectory(directory + "/Output")
@@ -1670,6 +1794,7 @@ type ComputeModuleSizesTest struct {
 }
 
 // TestComputeModuleSizes runs all test cases
+// TestComputeModuleSizes tests the ComputeModuleSizes function.
 func TestComputeModuleSizes(t *testing.T) {
 	tests := ReadComputeModuleSizesTests("Tests/ComputeModuleSizes/Input", "Tests/ComputeModuleSizes/Output")
 
@@ -1698,6 +1823,9 @@ func TestComputeModuleSizes(t *testing.T) {
 }
 
 // ReadComputeModuleSizesTests reads input/output test cases from directories
+// ReadComputeModuleSizesTests reads test data for ComputeModuleSizes function by parsing community assignment
+// files and expected module size mappings.
+// It takes input and output directory paths and returns a slice of ComputeModuleSizesTest structs.
 func ReadComputeModuleSizesTests(inputDir, outputDir string) []ComputeModuleSizesTest {
 	inputFiles := ReadDirectory(inputDir)
 	outputFiles := ReadDirectory(outputDir)
@@ -1733,6 +1861,7 @@ type TotalNumGenesTest struct {
 	Expected     int
 }
 
+// TestTotalNumGenes tests the TotalNumGenes function.
 func TestTotalNumGenes(t *testing.T) {
 	tests := ReadTotalNumGenesTests("Tests/TotalNumGenes")
 
@@ -1745,6 +1874,9 @@ func TestTotalNumGenes(t *testing.T) {
 	}
 }
 
+// ReadTotalNumGenesTests loads test cases for TotalNumGenes function by reading input files with gene name
+// lists and output files with expected total unique gene counts.
+// It takes a directory path as input and returns a slice of TotalNumGenesTest structs.
 func ReadTotalNumGenesTests(directory string) []TotalNumGenesTest {
 	inputFiles := ReadDirectory(directory + "/Input")
 	outputFiles := ReadDirectory(directory + "/Output")
@@ -1794,6 +1926,7 @@ type LocalClusteringCoeffTest struct {
 	ExpectedCoeff []float64
 }
 
+// TestLocalClusteringCoeff tests the LocalClusteringCoeff function.
 func TestLocalClusteringCoeff(t *testing.T) {
 	tests := ReadLocalClusteringCoeffTests("Tests/LocalClusteringCoeff/Input")
 
@@ -1811,6 +1944,9 @@ func TestLocalClusteringCoeff(t *testing.T) {
 	}
 }
 
+// ReadLocalClusteringCoeffTests reads graph network data from input files for testing LocalClusteringCoeff function,
+// constructing GraphNetwork structures from text representations.
+// It takes an input directory path and returns a slice of GraphNetwork structures.
 func ReadLocalClusteringCoeffTests(inputDir string) []GraphNetwork {
 	files, _ := os.ReadDir(inputDir)
 	var tests []GraphNetwork
@@ -1880,23 +2016,34 @@ func ReadLocalClusteringCoeffTests(inputDir string) []GraphNetwork {
 	return tests
 }
 
+// BuildGraphFromInputLines constructs a GraphNetwork structure from text lines containing node and edge definitions,
+// parsing node IDs, gene names, and edge connections with weights.
+// It takes a slice of string lines and returns a GraphNetwork structure.
 func BuildGraphFromInputLines(lines []string) GraphNetwork {
+	// Initialize graph with space for each node
 	graph := make(GraphNetwork, len(lines))
+
+	// Process each line to create nodes and edges
 	for _, line := range lines {
 		parts := strings.Fields(line)
-		id, _ := strconv.Atoi(parts[0])
-		name := parts[1]
+		id, _ := strconv.Atoi(parts[0]) // Node ID
+		name := parts[1]                // Gene name
+
+		// Create node with ID and gene name
 		graph[id] = &Node{
 			ID:       id,
 			GeneName: name,
 			Edges:    []*Edge{},
 		}
+
+		// Parse edges if they exist (format: "toID:weight,toID:weight")
 		if len(parts) > 2 {
 			edges := strings.Split(parts[2], ",")
 			for _, e := range edges {
 				edgeParts := strings.Split(e, ":")
 				toID, _ := strconv.Atoi(edgeParts[0])
 				weight, _ := strconv.ParseFloat(edgeParts[1], 64)
+				// Add edge to current node (note: assumes target node already exists)
 				graph[id].Edges = append(graph[id].Edges, &Edge{
 					To:     graph[toID],
 					Weight: weight,
@@ -1912,6 +2059,7 @@ type GlobalClusteringCoeffTest struct {
 	Expected float64
 }
 
+// TestGlobalClusteringCoeff tests the GlobalClusteringCoeff function.
 func TestGlobalClusteringCoeff(t *testing.T) {
 	// Read inputs and expected outputs
 	inputTests := ReadGlobalClusteringCoeffInputs("Tests/GlobalClusteringCoeff/Input")
@@ -1930,6 +2078,9 @@ func TestGlobalClusteringCoeff(t *testing.T) {
 	}
 }
 
+// ReadGlobalClusteringCoeffInputs reads input files containing local clustering coefficient values for testing
+// GlobalClusteringCoeff function, handling NaN values appropriately.
+// It takes an input directory path and returns a slice of float64 slices.
 func ReadGlobalClusteringCoeffInputs(inputDir string) [][]float64 {
 	files, _ := os.ReadDir(inputDir)
 	var tests [][]float64
@@ -1967,6 +2118,9 @@ func ReadGlobalClusteringCoeffInputs(inputDir string) [][]float64 {
 	return tests
 }
 
+// ReadGlobalClusteringCoeffOutputs reads output files containing expected global clustering coefficient values
+// for test validation, parsing floating-point results from text files.
+// It takes an output directory path and returns a slice of float64 slices.
 func ReadGlobalClusteringCoeffOutputs(outputDir string) [][]float64 {
 	files, _ := os.ReadDir(outputDir)
 	var outputs [][]float64
