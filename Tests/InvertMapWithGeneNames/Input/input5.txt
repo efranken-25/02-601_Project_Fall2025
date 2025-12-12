@@ -1,0 +1,7 @@
+geneNames: G1,G2,G3,G4,G5
+clusterMap:
+0:1
+1:2
+2:1
+3:3
+4:2

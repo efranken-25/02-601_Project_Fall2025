@@ -677,16 +677,18 @@ func main() {
 	// grabs largest module and saves data in .csv file
 	SaveLargestModule(BreastGraph, breastClusterMap, "largest_module.csv")
 
-	///save Correlation Matrix in .csv/////////
-	//breast (dataset1)
-	errCorrMatrixB := SaveMatrixAsCSV("BreastPearsonCorrelationMatrix.csv",
-		BreastPearsonCorrelationMatrix, breastGeneNames, breastGeneNames)
+	/*
+		///save Correlation Matrix in .csv/////////
+		//breast (dataset1)
+		errCorrMatrixB := SaveMatrixAsCSV("BreastPearsonCorrelationMatrix.csv",
+			BreastPearsonCorrelationMatrix, breastGeneNames, breastGeneNames)
 
-	if errCorrMatrixB != nil {
-		fmt.Println("Error saving Pearson matrix:", errCorrMatrixB)
-	} else {
-		fmt.Println("Pearson correlation matrix saved.")
-	}
+		if errCorrMatrixB != nil {
+			fmt.Println("Error saving Pearson matrix:", errCorrMatrixB)
+		} else {
+			fmt.Println("Pearson correlation matrix saved.")
+		}
+	*/
 
 	//////// Save module within 400-550 genes ///////////
 	// Breast - Read node–community CSV

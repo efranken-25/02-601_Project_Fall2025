@@ -1,0 +1,3 @@
+0,GeneA,1,2
+1,GeneB,0
+2,GeneC,0

@@ -1,0 +1,5 @@
+communityID:1
+GeneA,GeneC
+communityID:2
+GeneB,GeneD
+
