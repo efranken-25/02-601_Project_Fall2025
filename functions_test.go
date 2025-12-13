@@ -1,3 +1,6 @@
+// Gene Co-Expression Network Analysis Pipeline
+// Programming for Scientists (Group 2)
+// Date: December 12, 2025
 package main
 
 import (
@@ -2056,25 +2059,36 @@ func BuildGraphFromInputLines(lines []string) GraphNetwork {
 }
 
 type GlobalClusteringCoeffTest struct {
-	Input    []float64
-	Expected float64
+	Input        []float64
+	ExpectedMean float64
+	ExpectedStd  float64
 }
 
 // TestGlobalClusteringCoeff tests the GlobalClusteringCoeff function.
 func TestGlobalClusteringCoeff(t *testing.T) {
-	// Read inputs and expected outputs
 	inputTests := ReadGlobalClusteringCoeffInputs("Tests/GlobalClusteringCoeff/Input")
 	expectedTests := ReadGlobalClusteringCoeffOutputs("Tests/GlobalClusteringCoeff/Output")
 
 	if len(inputTests) != len(expectedTests) {
-		t.Fatalf("Mismatch in number of input and output files: %d inputs vs %d outputs", len(inputTests), len(expectedTests))
+		t.Fatalf("Mismatch in number of input and output files: %d inputs vs %d outputs",
+			len(inputTests), len(expectedTests))
 	}
 
 	for i, coeffs := range inputTests {
-		got := GlobalClusteringCoeff(coeffs)
-		expected := expectedTests[i][0] // Each output file should have a single line
-		if math.Abs(got-expected) > 1e-6 {
-			t.Errorf("Graph %d: GlobalClusteringCoeff mismatch. Got %.6f, want %.6f", i, got, expected)
+		gotMean, gotStd := GlobalClusteringCoeff(coeffs)
+
+		// Each output file should contain: mean on line 1, std on line 2
+		expectedMean := expectedTests[i][0]
+		expectedStd := expectedTests[i][1]
+
+		if math.Abs(gotMean-expectedMean) > 1e-6 {
+			t.Errorf("Graph %d: mean mismatch. Got %.6f, want %.6f",
+				i, gotMean, expectedMean)
+		}
+
+		if math.Abs(gotStd-expectedStd) > 1e-6 {
+			t.Errorf("Graph %d: std mismatch. Got %.6f, want %.6f",
+				i, gotStd, expectedStd)
 		}
 	}
 }
@@ -2917,10 +2931,9 @@ func ReadKSTestCases(folder string) ([]KSTestCase, error) {
 	}
 
 	var tests []KSTestCase
-	for _, inputFile := range inputFiles {
+	for i, inputFile := range inputFiles {
 		// corresponding output file with same base name
-		base := filepath.Base(inputFile)
-		outFile := filepath.Join(folder, "output", base)
+		outFile := filepath.Join(folder, "output", fmt.Sprintf("output%d.txt", i+1))
 
 		// Read input
 		data, err := os.ReadFile(inputFile)

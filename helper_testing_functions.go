@@ -1,3 +1,7 @@
+// Gene Co-Expression Network Analysis Pipeline
+// Programming for Scientists (Group 2)
+// Date: December 12, 2025
+
 //This file has all of the helper functions for the testing code.
 
 package main
