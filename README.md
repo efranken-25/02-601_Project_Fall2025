@@ -2,86 +2,232 @@
 
 ## Table of Contents
 * [Project Overview](#project-overview)
-* [Why We Used These Technologies](#why-we-used-these-technologies)
-* [Challenges We Faced](#challenges-we-faced)
-* [Potential Future Features](#potential-future-features)
+* [Pipeline Overview](#pipeline-overview)
+* [Repository Structure](#repository-structure)
 * [Installation](#installation)
 * [Usage](#usage)
-* [Tutorial](#tutorial)
+* [Features](#features)
+* [Outputs](#outputs)
+* [Coding Demonstration](#coding-demonstration)
 * [Authors](#authors)
 
 
-## Project Overview 
-Our application takes Gene Expression Quantification RNA-Seq data and creates an interactive and customizable co-expression network that allows the user to explore modules, while adjusting degree density, visibility of positive or negative edges, color schemes, and exporting figures. Users can analyze a single network or directly compare two datasets (in our case, cancer types) side-by-side to asses differences in co-expression structure and topology. Alongside this, it will calculate the global network statistics, such as clustering coefficients and degree distribution, to assess overall co-expression structure between cancer types.
+## Project Overview
 
-## Why We Used These Technologies
-Go was chosen for the backend analysis because of its strong performance, concurrency model, and clean support for object-oriented principles such as modularization and method-based struct organization. These features make it easier to structure complex biological workflows while maintaining readable, maintainable code.
+Given RNA-seq gene expression quantification files (TSV format), this project:
 
-R Shiny was used to create the interactive interface due to its simplicity in linking statistical analysis with real-time visualizations. Various packages in R's library, specifically `visNetwork` and `colourpicker` for customization, allow for user-friendly visualizations and controls without requiring users to install additional frameworks. 
+1. Computes pairwise gene–gene Pearson correlations across samples  
+2. Constructs a weighted, undirected gene co-expression network  
+3. Detects gene modules using the Louvain community detection algorithm  
+4. Computes network topology statistics (e.g., degree distribution and clustering behavior)  
+5. Compares real networks to Fixed-m random graph models and, when two datasets are provided, performs cross-dataset comparisons  
 
-Integrating Go with R Shiny enables CPU-efficient backend processing while providing an accessible, interactive frontend tailored for exploratory biological workflows.
+An R Shiny interface is included that allows users to run the Go analysis pipeline and interactively explore the resulting networks. Users can switch between datasets, view Louvain communities ranked by density, filter edges by correlation sign (positive/negative), customize colors, toggle gene labels, and export network visualizations.
 
-## Challenges We Faced
-* Determining how to compare networks:
-    - Comparing co-expression networks requires identifying which metrics are meaningful across datasets, since some statistics are designed to characterize a single network and are more biologically interpretable at that level. These include metrics such as module structure, network diameter, and centrality measures. In contrast, other metrics are more suitable for directly comparing two networks, such as differences in degree distributions, overall topology, density, or edge sign proportions. Selecting appropriate comparison strategies, and ensuring they were calculated consistently, was a major challenge.
+---
 
-* Handling large, high-dimensional data:
-    - RNA-Seq correlation matrices include thousands of genes, resulting in millions of pairwise comparisons. Efficiently computing and filtering these correlations, managing memory usage, and ensuring rapid data transfer between Go and Shiny required careful tuning.
+## Pipeline Overview
 
-## Potential Future Features
-* Module-level enrichment analysis
-* Support for more than two datasets simultaneosuly, with comparitive visualization panels
-* Implement soft modularity to allow calculation of the Jaccard similarity index within modules for a single network
+Top-down pipeline structure:
+
+1. **Input:** RNA-seq gene expression TSV files  
+2. **Preprocessing:** filtering and organization of expression data  
+3. **Correlation:** computation of Pearson gene–gene correlations  
+4. **Graph Construction:** weighted, undirected co-expression network  
+5. **Community Detection:** Louvain modularity optimization  
+6. **Network Analysis:** topology statistics and statistical comparisons  
+7. **Visualization:** interactive exploration using R Shiny  
+
+---
+
+## Repository Structure
+
+- `main.go`  
+  Orchestrates the full analysis pipeline: loads datasets, builds networks, runs Louvain community detection, computes statistics, performs comparisons, and writes output CSV files.
+
+- `functions.go`  
+  Contains core helper functions for data parsing, preprocessing, correlation computation, graph construction, community analysis, and statistical testing.
+
+- `io.go`  
+  File input/output operations for reading TSV files and writing CSV outputs.
+
+- `datatypes.go`  
+  Defines data structures used throughout the pipeline.
+
+- `louvain/`  
+  Implementation of the Louvain community detection algorithm used by the pipeline.
+
+- `GeneExpressionData/`  
+  Directory for input datasets:
+  - `GeneExpressionData/Dataset1/`
+  - `GeneExpressionData/Dataset2/`
+
+- `ShinyApp/`  
+  R Shiny interface (`app.R`) and CSV output files generated by the Go pipeline.
+
+---
 
 ## Installation
 
 ### Prerequisites
-* **Go 1.24** or higher
-    * Required Go packages (all listed in `go.mod` and `go.sum`; you might need to run `go get` to install them on your machine):
-        * Go modules enabled (Go 1.11+)
-        * `github.com/glycerine/golang-fisher-exact`
-        * `golang.org/x/exp/stats`
-        * `gonum.org/v1/gonum/stat`
 
-* **R version 4.2.1** or higher
-    * Required R packages: 
-        * `shiny`
-        * `visNetwork`
-        * `colourpicker`
-        * `shinycssloaders`
-        * `here`
+- **Go 1.24+** (tested with Go 1.24.5)
+- **R 4.2+**
 
+### Required R Packages
 
-## Usage 
+```r
+install.packages(c(
+  "shiny",
+  "visNetwork",
+  "colourpicker",
+  "shinycssloaders",
+  "here"
+))
+```
+
+---
+
+## Usage
+
+### Input Data
+
+Place RNA-seq gene expression quantification TSV files into:
+
+- `GeneExpressionData/Dataset1/` (required)
+- `GeneExpressionData/Dataset2/` (optional, for cross-dataset comparison)
+
+Each TSV file should have:
+- First column: Gene identifiers
+- Subsequent columns: Sample names with TPM (Transcripts Per Million) unstranded count values
+- Tab-separated format
+- The pipeline specifically parses TPM unstranded count data from the expression files
+
+Each dataset directory may contain one or more TSV files corresponding to samples from the same condition (e.g., cancer type).
 
 ### Running the Go Analysis
-1. Make sure you have Go 1.24 or higher installed and Go modules enabled. 
-2. Download this repository then go into it:
-    * download the 02-601_Program_Fall2025 zip file 
-    ```bash
-    cd 02-601_Project_Fall2025
+1. Make sure you have Go 1.24 or higher installed and Go modules enabled.
+
+2. Clone this repository:
+   ```bash
+   git clone https://github.com/efranken-25/02-601_Project_Fall2025.git
+   cd 02-601_Project_Fall2025
+   ```
+
 3. Install any Go dependencies (if not already in `go.mod`):
-    `go get ./...`
-4. Run the main Go program:
-    * For one file:
-        - `./02-601_Project_Fall2025 1` for Mac or `02-601_Project_Fall2025 1` for Windows
-    * For two files:
-        - The default is two, so if there is not a number placed after the command-line command, two files will automatically be read. You also could do `./02-601_Project_Fall2025 2` for Mac or `02-601_Project_Fall2025 2` for Windows if you want to be consistent. 
-5. The output CSV files for gene networks and community/module assignments will be saved in the `ShinyApp/` folder. 
+   ```bash
+   go get ./...
+   ```
+
+4. Build the Go executable:
+   ```bash
+   go build -o 02-601_Project_Fall2025
+   ```
+
+5. Run the main Go program:
+   - **For one dataset:**
+     ```bash
+     ./02-601_Project_Fall2025 1
+     ```
+   - **For two datasets:**
+     ```bash
+     ./02-601_Project_Fall2025 2
+     # or simply:
+     ./02-601_Project_Fall2025
+     ```
+     *Note: Two datasets is the default behavior.*
+
+6. The Go program prints progress updates and summary statistics to the terminal and writes output CSV files to the `ShinyApp/` directory.
+
 
 ### Running the Shiny App (R)
-1. Open **R** or **RStudio**
+
+**Note:** The Go executable must be built before launching the Shiny app, as the app calls the compiled Go program directly.
+
+1. Open the R script in **R** or **RStudio**
+
 2. Make sure you have the required packages installed:
-    `install.packages(c("shiny", "visNetwork", "colourpicker", "shinycssloaders", "here"))`
+   ```r
+   install.packages(c("shiny", "visNetwork", "colourpicker", "shinycssloaders", "here"))
+   ```
+
 3. Set your working directory to the project folder (so that the Shiny app can access the CSVs):
-    `setwd("/path/to/02-601_Project_Fall2025")`
+   ```r
+   setwd("/path/to/02-601_Project_Fall2025")
+   ```
+
 4. Launch the Shiny app:
-    `shiny::runApp()`
-5. The app will open in your web browser and display the interactive gene network visualizations. 
+   ```r
+   shiny::runApp("ShinyApp", launch.browser = TRUE)
+   ```
+   
+   **Note:** If your R working directory is not set to the project root, you may alternatively provide the full path:
+   ```r
+   shiny::runApp("/path/to/02-601_Project_Fall2025/ShinyApp", launch.browser = TRUE)
+   ```
 
-## Tutorial
+5. The app will open in your web browser.  
+   Click **"Run Full Analysis in Go"** to execute the Go pipeline.  
+   Progress updates and analysis summaries will print to the R console.
 
+   Once the analysis completes, you can:
+   - Switch between datasets
+   - Select Louvain communities
+   - Filter edges by correlation sign
+   - Customize visualization settings
+   - Export network images
 
+---
+
+### Features
+
+The Shiny app allows users to:
+- Run the Go pipeline
+- Switch between datasets
+- Explore Louvain communities ranked by density
+- Filter edges by correlation sign
+- Customize visualization options
+- Toggle labels
+- Export network images
+
+---
+
+### Outputs
+
+After running the Go analysis pipeline, the following outputs are generated:
+
+### File Outputs
+The Go pipeline writes CSV files to the `ShinyApp/` directory, including:
+- **Node tables:** gene identifiers with assigned Louvain community labels
+- **Edge tables:** weighted, undirected edges with Pearson correlation values
+- **Community statistics:** per-module size, density, and related structural metrics
+
+These CSV files are used by the R Shiny interface for visualization and interaction.
+
+### Console Output
+The Go pipeline also prints human-readable summaries during execution.  
+These summaries appear:
+- in the **terminal** when Go is run directly, or
+- in the **R console** when Go is executed through the Shiny app.
+
+Printed summaries include:
+- **Graph properties:** number of nodes and edges, mean degree, edge density, and proportions of positive vs. negative edges
+- **Module analysis:** number of modules, module size statistics (min / median / mean ± SD / max), and largest module details
+- **Module structure:** per-module tables reporting node counts, edge counts, and densities
+- **Network measures:** Louvain modularity scores and global clustering coefficients (mean ± standard deviation)
+- **Statistical comparisons (KS tests):**
+  - Real vs. Fixed-m random graph degree distributions (per dataset)
+  - Cross-dataset degree distribution comparisons (when two datasets are provided)
+  - Cross-dataset clustering coefficient distribution comparisons (when two datasets are provided)
+  - Corresponding D-statistics, p-values, and significance interpretations
+  
+---
+
+## Coding Demonstration
+
+A short recorded coding demonstration showing how to run the pipeline and explore results is available here:
+
+---
 
 ## Authors
 * **Beth Vazquez Smith** - [@bvazquezsmith](https://github.com/bvazquezsmith)

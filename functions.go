@@ -1,18 +1,22 @@
+// Gene Co-Expression Network Analysis Pipeline
+// Programming for Scientists (Group 2)
+// Date: December 12, 2025
 package main
 
 import (
-	"02-601_Project_Fall2025/louvain"
 	"context"
 	"log"
 	"math"
 	"math/rand"
 	"sort"
 	"strconv"
+
+	"02-601_Project_Fall2025/louvain"
 )
 
 // Function TransformMapToSlice takes a map's outerkey (geneName) and the map its in as input
 // and returns a slice corresponding to the float64 tpm values for each of the samples for that gene
-func TransformMapToSlice(geneName string, geneExpressionBreastMap map[string]map[string]float64) []float64 {
+func TransformMapToSlice(geneName string, geneExpressionBreastMap ExpressionMap) []float64 {
 	//initialize an empty slice to for a geneName, the float64 values are the tpm values for each of the samples
 	geneNameslice := make([]float64, 0)
 
@@ -30,10 +34,9 @@ func TransformMapToSlice(geneName string, geneExpressionBreastMap map[string]map
 
 }
 
-// Store all of the sample names from the Data
-// Function GetSampleNames takes a map[string]map[string]float64 as input and grabs the inner string key corresponding to the
+// Function GetSampleNames takes an ExpressionMap as input and grabs the inner string key corresponding to the
 // sample names and returns it as a slice of sample names
-func GetSampleNames(geneExpressionBreastMap map[string]map[string]float64) []string {
+func GetSampleNames(geneExpressionBreastMap ExpressionMap) []string {
 
 	samples := make([]string, 0)
 
@@ -55,10 +58,9 @@ func GetSampleNames(geneExpressionBreastMap map[string]map[string]float64) []str
 	return samples //return slice of string names
 }
 
-// Store all of the gene names from the Data
-// Function GetGeneNames takes a map[string]map[string]float64 as input and grabs the outer string key corresponding to the
+// Function GetGeneNames takes an ExpressionMap as input and grabs the outer string key corresponding to the
 // gene names and returns it as a sorted slice of gene names
-func GetGeneNames(geneExpressionBreastMap map[string]map[string]float64) []string {
+func GetGeneNames(geneExpressionBreastMap ExpressionMap) []string {
 
 	//initialize list to store geneNames
 	geneNames := make([]string, 0)
@@ -73,15 +75,15 @@ func GetGeneNames(geneExpressionBreastMap map[string]map[string]float64) []strin
 	return geneNames
 }
 
-// Use Mean-Based Filtering in order to normalize data while maintaining fixed number of samples across each gene
-// Function MeanBasedFilter takes map[string]map[string]float64 as input and returns a filtered map[string]map[string]float64 as output
+// Function MeanBasedFilter takes ExpressionMap as input and returns a filtered ExpressionMap as output
 // Step 1: Find/confirm number of samples for each gene (21 samples)
 // Step 2: For each gene, Calculate the mean of the tpm values across its samples and then,
 // Step 3: If the mean of that gene's tpm values is <=10 then remove the gene from further analyses
-func MeanBasedFilter(geneExpressionBreastMap map[string]map[string]float64, samples []string, meanThresh float64) map[string]map[string]float64 {
+// (Use Mean-Based Filtering in order to normalize data while maintaining fixed number of samples across each gene)
+func MeanBasedFilter(geneExpressionBreastMap ExpressionMap, samples []string, meanThresh float64) ExpressionMap {
 
 	//initialize a nested map for return corresponding to the input map filtered for only genes with a mean tpm greater than 10.0
-	out := make(map[string]map[string]float64, len(geneExpressionBreastMap))
+	out := make(ExpressionMap, len(geneExpressionBreastMap))
 
 	//find the number of samples
 	n := len(samples)
@@ -108,9 +110,7 @@ func MeanBasedFilter(geneExpressionBreastMap map[string]map[string]float64, samp
 	return out
 }
 
-// sortSampleNames takes a slice of strings as input and sorts the strings in order based on their # following "BRCA"
-// This is a helper function that sorts sample names in numerical order based on the number following "BRCA" prefix
-// using slice sorting with a custom comparison function.
+// Function sortSampleNames take a slice of strings as input and sorts the strings in order based on their # following "BRCA"
 func sortSampleNames(samples []string) {
 	sort.Slice(samples, func(i, j int) bool {
 		getNum := func(s string) int {
@@ -123,13 +123,13 @@ func sortSampleNames(samples []string) {
 }
 
 // Function ComputePearsonCorrelation takes as input a sorted list of gene names and sample names, as well as a nested filtered map
-// of map[genenames]map[samplenames]TPMValues and it computes the Pearson Correlation between each pair of genes across samples
-// it returns a 2D matrix of pearson coeff values ([][]float64) with row and column indices corresponding to indices of genes found in sortedGeneNames list
-func ComputePearsonCorrelation(sortedGeneNames, sortedSampleNames []string, filteredGeneExpressionBreastMap map[string]map[string]float64) [][]float64 {
+// of ExpressionMap and it computes the Pearson Correlation between each pair of genes across samples
+// it returns a CorrelationMatrix with row and column indices corresponding to indices of genes found in sortedGeneNames list
+func ComputePearsonCorrelation(sortedGeneNames, sortedSampleNames []string, filteredGeneExpressionBreastMap ExpressionMap) CorrelationMatrix {
 
 	//initialize a square matrix for return
 	n := len(sortedGeneNames)
-	CorrMatrix := make([][]float64, n)
+	CorrMatrix := make(CorrelationMatrix, n)
 	//make the columns for a gene x gene square matrix
 	for i := range CorrMatrix {
 		CorrMatrix[i] = make([]float64, n)
@@ -182,7 +182,6 @@ func ComputePearsonCorrelation(sortedGeneNames, sortedSampleNames []string, filt
 	return CorrMatrix
 }
 
-// Custom Pearson correlation calculation function
 // Function calculatePearsonCorrelation computes the Pearson correlation coefficient between two slices of float64 values using the formula:
 // r = Σ[(xi - x̄)(yi - ȳ)] / √[Σ(xi - x̄)²] × √[Σ(yi - ȳ)²]
 // where x̄ and ȳ are the means of x and y respectively
@@ -226,7 +225,7 @@ func calculatePearsonCorrelation(x, y []float64) float64 {
 
 // Function TransformMatrixToSlice takes a symmetrical square matrix as input and flattens
 // it into a single slice of float64 values for return.
-func TransformMatrixToSlice(BreastPearsonCorrelationMatrix [][]float64) []float64 {
+func TransformMatrixToSlice(BreastPearsonCorrelationMatrix CorrelationMatrix) []float64 {
 	quantileSlice := make([]float64, 0)
 
 	numRows := len(BreastPearsonCorrelationMatrix)
@@ -268,9 +267,7 @@ func ComputeQuantile(quantileSlice []float64) []float64 {
 	return computedQuantiles
 }
 
-// CalculateQuantile computes a specific quantile for a given probability from sorted data using linear interpolation
-// between adjacent values when the exact position falls between data points.
-// It takes a sorted slice of float64 values and a probability p as input and returns the computed quantile.
+// Function CalculateQuantile computes the quantile (output) for a given probability p (input) from a sorted slice (input)
 func CalculateQuantile(sortedData []float64, p float64) float64 {
 	n := len(sortedData)
 	//check that the data slice is not empty or length 1, if it is then return 0.0 probability
@@ -305,7 +302,7 @@ func CalculateQuantile(sortedData []float64, p float64) float64 {
 // threshold and builds an undirected, weighted graph network.
 // If the absolute value of the correlation between 2 genes is >= threshold, then there is an edge between those
 // two genes (nodes)
-func BuildGraph(BreastPearsonCorrelationMatrix [][]float64, breastGeneNames []string, threshold float64) GraphNetwork {
+func BuildGraph(BreastPearsonCorrelationMatrix CorrelationMatrix, breastGeneNames []string, threshold float64) GraphNetwork {
 
 	numGenes := len(BreastPearsonCorrelationMatrix)
 	numCols := len(BreastPearsonCorrelationMatrix[0])
@@ -349,7 +346,7 @@ func BuildGraph(BreastPearsonCorrelationMatrix [][]float64, breastGeneNames []st
 
 // Identify clustering using Louvain algorithm from package by building Louvain graph type from the correlation matrix and threshold inputs.
 /*
-func BuildLouvainGraph is a helper function that converts the correlation matrix into a pointer to Louvain graph type
+func BuildLouvainGraph is a helper function that converts the CorrelationMatrix into a pointer to Louvain graph type
 that is required as input for the Louvain algorithm.
 
 This function also uses 2 calls from the package library:
@@ -365,10 +362,7 @@ type Graph struct {
 	TotalWeight float64       // sum of all edge weights
 }
 */
-// BuildLouvainGraph converts a correlation matrix into a Louvain graph structure by creating nodes and adding edges
-// between genes whose correlation exceeds the threshold, using absolute correlation values as edge weights.
-// It takes a correlation matrix and threshold as input and returns a pointer to a louvain.Graph.
-func BuildLouvainGraph(BreastPearsonCorrelationMatrix [][]float64, threshold float64) *louvain.Graph {
+func BuildLouvainGraph(BreastPearsonCorrelationMatrix CorrelationMatrix, threshold float64) *louvain.Graph {
 	numGenes := len(BreastPearsonCorrelationMatrix) //equivalent to numNodes
 	graph := louvain.NewGraph(numGenes)
 
@@ -387,11 +381,11 @@ func BuildLouvainGraph(BreastPearsonCorrelationMatrix [][]float64, threshold flo
 	return graph //pointer to a graph
 }
 
-// RunLouvainOnMatrix executes the Louvain clustering algorithm on a graph to identify communities, configuring
-// algorithm parameters and returning a mapping of node IDs to community IDs along with the modularity score.
 // Adapted from (github.com/gilchrisn/graph-clustering-service/pkg2/louvain)
-// It runs Louvain algorithm to mathematically determine communities (clusters of nodes) in a graph network to
+// RunLouvainOnMatrix: runs Louvain algorithm to mathematically determine communities (clusters of nodes) in a graph network to
 // determine which genes are more strongly correlated to one another than to other genes.
+// Function takes as input a pointer to louvain graph type
+// outputs a map of nodeIDs to their community(cluster) ID and a measure of their modularity
 func RunLouvainOnMatrix(graph *louvain.Graph) (map[int]int, float64) {
 
 	// Configure Louvain
@@ -410,9 +404,9 @@ func RunLouvainOnMatrix(graph *louvain.Graph) (map[int]int, float64) {
 	return result.FinalCommunities, result.Modularity
 }
 
-// CountCommunities counts the number of unique communities in a clustering result by iterating through
-// the community assignments and tracking distinct community IDs.
-// It takes a map of nodeIDs to their community ID as input and returns the count of unique communities.
+// Function CountCommunities counts the number of unique communities(clusters) produced from the Louvain algorithm
+// takes as input: map of nodeIDs to their community(cluster) ID
+// output: count of number of communities
 func CountCommunities(communityMap map[int]int) int {
 	count := 0
 
@@ -421,7 +415,7 @@ func CountCommunities(communityMap map[int]int) int {
 
 	//range over the map and extract unique communities
 	for _, community := range communityMap {
-		if seen[community] != true {
+		if !seen[community] {
 			seen[community] = true
 			count++ //count of unique communities
 		}
@@ -429,8 +423,6 @@ func CountCommunities(communityMap map[int]int) int {
 
 	return count
 }
-
-// Analyzing the graph networks
 
 // Function CalculateNumEdges takes a graph network as input and calculates the total number of edges in the graph for return
 func CalculateNumEdges(BreastGraph GraphNetwork) int {
@@ -534,9 +526,8 @@ func ComputeModuleDensities(moduleSizes map[int]int, moduleEdges map[int]int) ma
 	return moduleDensities
 }
 
-// EdgeStats analyzes edge weights in a graph network to count the number of positively and negatively
-// correlated edges, ensuring each undirected edge is counted only once.
-// It takes a graph network as input and returns the count of positive and negative edges.
+// Function EdgeStats takes a graph network as input and computes the number of positively and negatively
+// correlated edges in the graph (output)
 func EdgeStats(graph GraphNetwork) (pos, neg int) {
 	for _, node := range graph {
 		fromID := node.ID
@@ -560,9 +551,8 @@ func EdgeStats(graph GraphNetwork) (pos, neg int) {
 	return pos, neg
 }
 
-// ComputeModuleSizes calculates the size (number of nodes) of each community by counting occurrences
-// of each community ID in the clustering assignment map.
-// It takes a map[nodeID]communityID and returns a map[communityID]moduleSize.
+// Function ComputeModuleSizes takes a map[nodeID]communityID and returns
+// a map[communityID]moduleSize to analyze module size
 func ComputeModuleSizes(clusterMap map[int]int) map[int]int {
 	moduleSizes := make(map[int]int)
 
@@ -573,9 +563,8 @@ func ComputeModuleSizes(clusterMap map[int]int) map[int]int {
 	return moduleSizes //return map
 }
 
-// LargestModule identifies the community with the maximum number of nodes, returning both the community ID
-// and its size, with special handling for empty input.
-// It takes a map[communityID]moduleSize as input and returns the communityID with the largest size and its size.
+// Function LargestModule takes as input a map[communityID]moduleSize and returns the communityID with the
+// largest size as well as its size
 // If moduleSizes is empty, it returns (-1, 0).
 func LargestModule(moduleSizes map[int]int) (int, int) {
 	//guard against an empty map
@@ -616,7 +605,7 @@ func SummarizeModuleSizes(
 	moduleSizes map[int]int,
 	totalGenes int,
 ) (
-	minSize, maxSize, meanSize, medianSize float64,
+	minSize, maxSize, meanSize, medianSize, stdSize float64,
 	numModules, numSmall int,
 	largestModuleID int,
 	largestPct float64,
@@ -672,6 +661,14 @@ func SummarizeModuleSizes(
 	// Calculate arithmetic mean: μ = Σxi/n
 	meanSize = float64(sum) / float64(numModules)
 
+	// Calculate standard deviation: σ = √(Σ(xi-μ)²/n)
+	varSum := 0.0
+	for _, size := range sizes {
+		diff := float64(size) - meanSize
+		varSum += diff * diff
+	}
+	stdSize = math.Sqrt(varSum / float64(numModules))
+
 	// Calculate median: middle value of sorted distribution
 	sort.Ints(sizes) // sort module sizes in ascending order
 	if numModules%2 == 1 {
@@ -691,9 +688,9 @@ func SummarizeModuleSizes(
 	return
 }
 
-// InvertMapWithGeneNames converts a node-to-community mapping into a community-to-gene-names mapping
-// by using node IDs as indices into the gene names slice.
-// It takes a map[nodeID]communityID and a slice of gene names, and returns a map[communityID][]geneName.
+// Function InvertMapWithGeneNames converts a map[nodeID]communityID into
+// map[communityID][]geneName, using the provided geneNames slice
+// where geneNames[nodeID] gives the gene name.
 func InvertMapWithGeneNames(clusterMap map[int]int, geneNames []string) map[int][]string {
 	//initialize inverted map to store community ID to gene names mapping
 	moduleMap := make(map[int][]string)
@@ -709,9 +706,8 @@ func InvertMapWithGeneNames(clusterMap map[int]int, geneNames []string) map[int]
 	return moduleMap
 }
 
-// MapIntValuesToFloatSlice extracts integer values from a map and converts them to a slice of float64 values,
-// useful for statistical analysis of map values.
-// It takes a map[int]int as input and returns a []float64 of just the values.
+// Function MapIntValuesToFloatSlice converts a map[int]int (input)
+// into a []float64 of just the values (output)
 func MapIntValuesToFloatSlice(m map[int]int) []float64 {
 	out := make([]float64, 0, len(m))
 	//range over the map keys and extract the values to append to growing slice
@@ -721,9 +717,8 @@ func MapIntValuesToFloatSlice(m map[int]int) []float64 {
 	return out
 }
 
-// MapFloatValuesToSlice extracts float64 values from a map and returns them as a slice,
-// enabling statistical operations on map values.
-// It takes a map[int]float64 as input and returns a []float64 of just the values.
+// Function MapFloatValuesToSlice converts a map[int]float64 (input)
+// into a []float64 of just the values (output)
 func MapFloatValuesToSlice(m map[int]float64) []float64 {
 	out := make([]float64, 0, len(m))
 	//range over the map keys and extract the values to append to growing slice
@@ -794,9 +789,8 @@ func LocalClusteringCoeff(graph GraphNetwork) []float64 {
 	return clusteringCoeffs
 }
 
-// FilterNaNs removes all NaN (Not a Number) values from a float64 slice, returning a new slice
-// containing only valid numeric values.
-// It takes a slice of float64 values as input and returns a filtered slice without NaN values.
+// Function FilterNaNs takes a slice of floats as input and returns a new slice
+// with all NaN values removed.
 func FilterNaNs(vals []float64) []float64 {
 	out := make([]float64, 0, len(vals))
 	//range through the input
@@ -809,28 +803,20 @@ func FilterNaNs(vals []float64) []float64 {
 	return out
 }
 
-// Function GlobalClusteringCoeff takes as input a list of local clustering coefficients and computes
-// the mean of these values for all nodes with at least two neighbors. This outputs a global measure
-// of how “clustered” the whole network is.
-func GlobalClusteringCoeff(clusteringCoeffs []float64) float64 {
-	sum := 0.0
-	nonNaNCount := 0.0
+// Function GlobalClusteringCoeff takes as input a list of local clustering coefficients, filters out NaN values,
+// and computes both the mean and standard deviation of the valid clustering coefficients.
+// This outputs global measures of how clustered the whole network is.
+func GlobalClusteringCoeff(clusteringCoeffs []float64) (mean float64, sd float64) {
+	// Filter out NaN values first
+	filteredCoeffs := FilterNaNs(clusteringCoeffs)
 
-	//find number of nonNaN clustering coeffs
-	for i := 0; i < len(clusteringCoeffs); i++ {
-		if !math.IsNaN(clusteringCoeffs[i]) {
-			nonNaNCount++
-			//sum nonNaN clustering coeffs
-			sum = sum + clusteringCoeffs[i]
-		}
-	}
-	//compute the average
-	return sum / float64(nonNaNCount)
+	// Use MeanStd to compute both statistics
+	mean, sd = MeanStd(filteredCoeffs)
+	return mean, sd
 }
 
-// ComputeDegrees calculates the degree (number of connections) for each node in the graph network,
-// returning a slice where each position corresponds to a node's degree count.
-// It takes a graph network structure as input and returns a slice of degree values for each node.
+// Function ComputeDegrees takes a graph network structure as input and computes for each node in the graph its
+// degree = its number of connected edges. It returns a slice containing a list of these values (# of degrees) for each node in the graph.
 func ComputeDegrees(graph GraphNetwork) []float64 {
 	degree := make([]float64, len(graph))
 	//range over the graph network
@@ -842,9 +828,7 @@ func ComputeDegrees(graph GraphNetwork) []float64 {
 	return degree
 }
 
-// MeanStd computes both the arithmetic mean and population standard deviation of a slice of values
-// using standard statistical formulas.
-// It takes a slice of float64 values as input and returns the mean and standard deviation.
+// Function MeanStd computes the mean and standard deviation (output) of a slice of float64 values (input)
 func MeanStd(vals []float64) (mean float64, sd float64) {
 	//find the number of total values
 	n := float64(len(vals))
@@ -979,9 +963,8 @@ func RandomGraphGenerator(geneNames []string, pVal float64, targetEdges int) Gra
 	return graph
 }
 
-// calculateECDF calculates the Empirical Cumulative Distribution Function value at point x by counting
-// the proportion of sample values less than or equal to x.
-// It takes a sample slice and a point x as input and returns the ECDF value at x.
+// Function calculateECDF calculates the Empirical Cumulative Distribution Function (ECDF) value
+// for a given sample (distribution) at a specific point x using the formula: ECDF(x) = (number of values ≤ x) / n
 func calculateECDF(sample []float64, x float64) float64 {
 	count := 0
 	//range over the sample and count the number of values that are <= x
@@ -994,9 +977,8 @@ func calculateECDF(sample []float64, x float64) float64 {
 	return float64(count) / float64(len(sample))
 }
 
-// KSTwoSampleStatistic computes the Kolmogorov-Smirnov D statistic by finding the maximum absolute
-// difference between empirical CDFs of two samples at all unique data points.
-// It takes two sample slices as input and returns the KS test statistic D.
+// Function KSTwoSampleStatistic calculates the Kolmogorov-Smirnov D statistic for two samples
+// using the formula: D = max|F₁(x) - F₂(x)| where F₁ and F₂ are empirical CDFs
 func KSTwoSampleStatistic(sample1, sample2 []float64) float64 {
 
 	length1 := len(sample1)
@@ -1041,9 +1023,13 @@ func KSTwoSampleStatistic(sample1, sample2 []float64) float64 {
 	return maxD
 }
 
-// KSTest performs the two-sample Kolmogorov-Smirnov test to determine if two datasets come from the same
-// distribution, computing both the test statistic and p-value using the infinite series formula.
-// It takes two dataset slices as input and returns the D statistic and p-value.
+// Function KSTest performs the two-sample Kolmogorov-Smirnov test to determine if two datasets
+// come from the same underlying distribution using the KS test statistic:
+// D = max|F₁(x) - F₂(x)| where F₁ and F₂ are the empirical cumulative distribution functions
+// The p-value is computed using the infinite series formula: p = 2*∑[k=1 to ∞] (-1)^(k-1)*e^(-2k² * λ²)
+// where λ = √(neff) * D and neff = (n₁ × n₂)/(n₁ + n₂)
+// Inputs: dataset1, dataset2 - two slices of float64 values to compare
+// Outputs: dStatistic (KS test statistic), pValue (probability of observing this difference under null hypothesis)
 func KSTest(dataset1, dataset2 []float64) (float64, float64) {
 
 	// Calculate KS test statistic
