@@ -7,7 +7,7 @@
 * [Potential Future Features](#potential-future-features)
 * [Installation](#installation)
 * [Usage](#usage)
-* [Features](#features)
+* [Tutorial](#tutorial)
 * [Authors](#authors)
 
 
@@ -18,8 +18,6 @@ Our application takes Gene Expression Quantification RNA-Seq data and creates an
 Go was chosen for the backend analysis because of its strong performance, concurrency model, and clean support for object-oriented principles such as modularization and method-based struct organization. These features make it easier to structure complex biological workflows while maintaining readable, maintainable code.
 
 R Shiny was used to create the interactive interface due to its simplicity in linking statistical analysis with real-time visualizations. Various packages in R's library, specifically `visNetwork` and `colourpicker` for customization, allow for user-friendly visualizations and controls without requiring users to install additional frameworks. 
-
-R Studio....
 
 Integrating Go with R Shiny enables CPU-efficient backend processing while providing an accessible, interactive frontend tailored for exploratory biological workflows.
 
@@ -58,9 +56,9 @@ Integrating Go with R Shiny enables CPU-efficient backend processing while provi
 
 ### Running the Go Analysis
 1. Make sure you have Go 1.24 or higher installed and Go modules enabled. 
-2. Clone this repository:
+2. Download this repository then go into it:
+    * download the 02-601_Program_Fall2025 zip file 
     ```bash
-    git clone https://github.com/efranken-25/02-601_Project_Fall2025.git 
     cd 02-601_Project_Fall2025
 3. Install any Go dependencies (if not already in `go.mod`):
     `go get ./...`
@@ -81,7 +79,7 @@ Integrating Go with R Shiny enables CPU-efficient backend processing while provi
     `shiny::runApp()`
 5. The app will open in your web browser and display the interactive gene network visualizations. 
 
-## Features
+## Tutorial
 
 
 
