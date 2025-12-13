@@ -552,10 +552,10 @@ func main() {
 			fmt.Printf("The %s and %s networks have similar local clustering patterns.\n", dataset1Label, dataset2Label)
 		}
 
-		if errBC := SaveClusteringCoeffDistCSV(breastClusteringFiltered, "breast_clustering.csv", "Breast"); errBC != nil {
+		if errBC := SaveClusteringCoeffDistCSV(breastClusteringFiltered, "ExtraData/breast_clustering.csv", "Breast"); errBC != nil {
 			fmt.Println("Error:", errBC)
 		}
-		if errOC := SaveClusteringCoeffDistCSV(ovarianClusteringFiltered, "ovarian_clustering.csv", "Ovarian"); errOC != nil {
+		if errOC := SaveClusteringCoeffDistCSV(ovarianClusteringFiltered, "ExtraData/ovarian_clustering.csv", "Ovarian"); errOC != nil {
 			fmt.Println("Error:", errOC)
 		}
 

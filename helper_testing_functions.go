@@ -385,6 +385,7 @@ func CompareModuleMaps(a, b map[int][]string) bool {
 	return true
 }
 
+// AdjacencySlicesEqual checks whether two adjacency lists are equal, ignoring the order of neighbors within each node.
 func AdjacencySlicesEqual(a, b [][]int) bool {
 	if len(a) != len(b) {
 		return false

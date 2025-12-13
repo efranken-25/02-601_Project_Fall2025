@@ -2161,6 +2161,7 @@ type LargestModuleTest struct {
 	resultSize  int
 }
 
+// TestLargestModule tests the LargestModule function.
 func TestLargestModule(t *testing.T) {
 	tests := ReadLargestModuleTests("Tests/LargestModules")
 
@@ -2174,6 +2175,12 @@ func TestLargestModule(t *testing.T) {
 	}
 }
 
+// ReadLargestModuleTests constructs a slice of LargestModuleTest structures from input/output files.
+// Parameters are a directory, with a path to the folder containing "Input" and "Output" subfolders with test files.
+// It returns a slice of LargestModuleTest containing
+//   - moduleSizes: a map[int]int representing node IDs and their module sizes.
+//   - resultComm: expected community ID for the largest module.
+//   - resultSize: expected size of the largest module.
 func ReadLargestModuleTests(directory string) []LargestModuleTest {
 	inputFiles := ReadDirectory(directory + "/Input")
 	outputFiles := ReadDirectory(directory + "/Output")
@@ -2270,6 +2277,7 @@ type InvertMapWithGeneNamesTest struct {
 	result     map[int][]string
 }
 
+// TestInvertMapWithGeneNames tests the InvertMapWithGeneNames function.
 func TestInvertMapWithGeneNames(t *testing.T) {
 	tests := ReadInvertMapWithGeneNamesTests("Tests/InvertMapWithGeneNames")
 	for _, test := range tests {
@@ -2281,7 +2289,12 @@ func TestInvertMapWithGeneNames(t *testing.T) {
 	}
 }
 
-// parsing code
+// ReadInvertMapWithGeneNamesTests constructs a slice of InvertMapWithGeneNamesTest structures from input/output files.
+// Parameters are a directory, with a path to the folder containing "Input" and "Output" subfolders with test files.
+// It returns a slice of InvertMapWithGeneNamesTest containing
+//   - clusterMap: input map of node IDs to cluster IDs
+//   - geneNames: input list of gene names
+//   - result: expected inverted map of cluster IDs to gene names
 func ReadInvertMapWithGeneNamesTests(directory string) []InvertMapWithGeneNamesTest {
 	inputFiles := ReadDirectory(directory + "/Input")
 	outputFiles := ReadDirectory(directory + "/Output")
@@ -2386,6 +2399,7 @@ type MapIntValuesToFloatSliceTest struct {
 	result []float64
 }
 
+// TestMapIntValuesToFloatSlice tests the MapIntValuesToFloatSlice function.
 func TestMapIntValuesToFloatSlice(t *testing.T) {
 	tests := ReadMapIntValuesToFloatSliceTests("Tests/MapIntValuesToFloatSlice")
 	for _, test := range tests {
@@ -2397,6 +2411,11 @@ func TestMapIntValuesToFloatSlice(t *testing.T) {
 	}
 }
 
+// ReadMapIntValuesToFloatSliceTests constructs a slice of MapIntValuesToFloatSliceTest structures from input/output files.
+// Parameters are a directory, with a path to the folder containing "Input" and "Output" subfolders with test files.
+// It returns a slice of MapIntValuesToFloatSliceTest containing
+//   - input: map of integers representing node IDs and cluster IDs
+//   - result: expected slice of float64 after mapping the values
 func ReadMapIntValuesToFloatSliceTests(directory string) []MapIntValuesToFloatSliceTest {
 	inputFiles := ReadDirectory(directory + "/Input")
 	outputFiles := ReadDirectory(directory + "/Output")
@@ -2474,6 +2493,7 @@ type FilterNaNsTest struct {
 	result []float64
 }
 
+// TestFilterNaNs tests the FilterNaNs function.
 func TestFilterNaNs(t *testing.T) {
 	tests := ReadFilterNaNsTests("Tests/FilterNaNs")
 	for _, test := range tests {
@@ -2485,6 +2505,11 @@ func TestFilterNaNs(t *testing.T) {
 	}
 }
 
+// ReadFilterNaNsTests constructs a slice of FilterNaNsTest structures from input/output files.
+// Parameters are a directory, with a path to the folder containing "Input" and "Output" subfolders with test files.
+// It returns a slice of FilterNaNsTest containing
+//   - input: a slice of float64 values corresponding to clustering coefficient values
+//   - result: a slice of float64 values with removed NaN values from the clustering coefficient values
 func ReadFilterNaNsTests(directory string) []FilterNaNsTest {
 	inputFiles := ReadDirectory(directory + "/Input")
 	outputFiles := ReadDirectory(directory + "/Output")
@@ -2571,7 +2596,7 @@ type ComputeDegreesTest struct {
 	result []float64
 }
 
-// TestComputeDegrees runs all tests for ComputeDegrees
+// TestComputeDegrees tests the ComputeDegrees function.
 func TestComputeDegrees(t *testing.T) {
 	tests := ReadComputeDegreesTests("Tests/ComputeDegrees")
 	for _, test := range tests {
@@ -2582,7 +2607,11 @@ func TestComputeDegrees(t *testing.T) {
 	}
 }
 
-// ReadComputeDegreesTests reads input/output files for ComputeDegrees tests
+// ReadComputeDegreesTests constructs a slice of ComputeDegreesTest structures from input/output files.
+// Parameters are a directory, with a path to the folder containing "Input" and "Output" subfolders with test files.
+// It returns a slice of ComputeDegreesTest containing
+//   - graph: an input GraphNetwork that represents a slice of Node pointers
+//   - result: a slice of float64 values corresponding to the expected degrees of each node
 func ReadComputeDegreesTests(directory string) []ComputeDegreesTest {
 	inputFiles := ReadDirectory(directory + "/Input")
 	outputFiles := ReadDirectory(directory + "/Output")
@@ -2681,7 +2710,7 @@ type ECDFTest struct {
 	Result float64
 }
 
-// calculateECDF testing code
+// TestCalculateECDF tests the calculateECDF function.
 func TestCalculateECDF(t *testing.T) {
 	tests, err := ReadECDFTests("calculateECDF")
 	if err != nil {
@@ -2696,7 +2725,12 @@ func TestCalculateECDF(t *testing.T) {
 	}
 }
 
-// ParseECDFTestFile returns a slice of ECDFTest
+// ReadECDFTests constructs a slice of ECDFTest structures from input/output files.
+// Parameters are a directory, with a path to the folder containing "Input" and "Output" subfolders with test files.
+// It returns a slice of ECDFTest containing
+//   - Sample: slice of int input values regarding to the sample
+//   - X: float64 value which is the point at which the ECDF is evaluated
+//   - result: expected ECDF value of X
 func ReadECDFTests(folder string) ([]ECDFTest, error) {
 	inputFiles, err := filepath.Glob(filepath.Join(folder, "input", "*.txt"))
 	if err != nil {
@@ -2759,6 +2793,7 @@ type KSTwoSampleTest struct {
 	Result  float64
 }
 
+// TestKSTwoSampleStatistic tests the KSTwoSampleStatistic function.
 func TestKSTwoSampleStatistic(t *testing.T) {
 	tests, err := ReadKSTwoSampleStatisticTest("Tests/KSTwoSampleStatistic")
 	if err != nil {
@@ -2773,21 +2808,25 @@ func TestKSTwoSampleStatistic(t *testing.T) {
 	}
 }
 
+// ReadKSTwoSampleStatisticTest constructs a slice of KSTwoSampleTest structures from input/output files.
+// Parameters are a directory, with a path to the folder containing "Input" and "Output" subfolders with test files.
+// It returns a slice of KSTwoSampleTest containing
+//   - Sample1: slice of int input values regarding to dataset1
+//   - Sample2: slice of int input values regarding to dataset2
+//   - Result: expected KS Test statistic D in float64 format
 func ReadKSTwoSampleStatisticTest(folder string) ([]KSTwoSampleTest, error) {
 	// Find all input files
 	inputFiles, err := filepath.Glob(filepath.Join(folder, "input", "*.txt"))
-
 	if err != nil {
 		return nil, err
 	}
 
 	var tests []KSTwoSampleTest
-	for _, inputFile := range inputFiles {
-		// Corresponding output file has the same base name
-		base := filepath.Base(inputFile)
-		outFile := filepath.Join(folder, "output", base)
+	for i, inputFile := range inputFiles {
+		// Construct the corresponding output file name (output1.txt, output2.txt, ...)
+		outFile := filepath.Join(folder, "output", fmt.Sprintf("output%d.txt", i+1))
 
-		// Read input file
+		// --- Read input file ---
 		data, err := os.ReadFile(inputFile)
 		if err != nil {
 			return nil, err
@@ -2820,20 +2859,124 @@ func ReadKSTwoSampleStatisticTest(folder string) ([]KSTwoSampleTest, error) {
 			return nil, err
 		}
 
-		// Read expected output
-		outData, err := filepath.Glob(filepath.Join(folder, "output", "*.txt"))
+		// --- Read expected output file ---
+		outData, err := os.ReadFile(outFile)
 		if err != nil {
 			return nil, err
 		}
 		expected, err := strconv.ParseFloat(strings.TrimSpace(string(outData)), 64)
 		if err != nil {
-			return nil, fmt.Errorf("invalid output in %s: %v", outFile, err)
+			return nil, fmt.Errorf("invalid float in output file %s: %v", outFile, err)
 		}
 
+		// Append test case
 		tests = append(tests, KSTwoSampleTest{
 			Sample1: sample1,
 			Sample2: sample2,
 			Result:  expected,
+		})
+	}
+
+	return tests, nil
+}
+
+type KSTestCase struct {
+	Dataset1 []float64
+	Dataset2 []float64
+	DStat    float64
+	PValue   float64
+}
+
+// TestKSTwoSampleStatistic tests the KSTwoSampleStatistic function.
+func TestKSTest(t *testing.T) {
+	tests, err := ReadKSTestCases("Tests/KSTest")
+	if err != nil {
+		t.Fatalf("Failed to read KS tests: %v", err)
+	}
+
+	for i, test := range tests {
+		gotD, gotP := KSTest(test.Dataset1, test.Dataset2)
+		if math.Abs(gotD-test.DStat) > 1e-6 || math.Abs(gotP-test.PValue) > 1e-6 {
+			t.Errorf("Test %d failed:\nGot: D=%.6f, P=%.6f\nWant: D=%.6f, P=%.6f",
+				i+1, gotD, gotP, test.DStat, test.PValue)
+		}
+	}
+}
+
+// ReadKSTestCases constructs a slice of KSTestCase structures from input/output files.
+// Parameters are a directory, with a path to the folder containing "Input" and "Output" subfolders with test files.
+// It returns a slice of KSTestCase containing
+//   - Dataset1: slice of float64 values for the first empirical sample
+//   - Dataset2: slice of float64 values for the second empirical sample
+//   - DStat: expected Kolmogorov-Smirnov D Statistic
+//   - PValue: expected p=value corresponding to the KS Test
+func ReadKSTestCases(folder string) ([]KSTestCase, error) {
+	inputFiles, err := filepath.Glob(filepath.Join(folder, "input", "*.txt"))
+	if err != nil {
+		return nil, err
+	}
+
+	var tests []KSTestCase
+	for _, inputFile := range inputFiles {
+		// corresponding output file with same base name
+		base := filepath.Base(inputFile)
+		outFile := filepath.Join(folder, "output", base)
+
+		// Read input
+		data, err := os.ReadFile(inputFile)
+		if err != nil {
+			return nil, err
+		}
+		lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+		if len(lines) < 2 {
+			return nil, fmt.Errorf("input file %s must have at least 2 lines", inputFile)
+		}
+
+		parseSample := func(line string) ([]float64, error) {
+			parts := strings.Split(line, ",")
+			sample := make([]float64, len(parts))
+			for i, s := range parts {
+				val, err := strconv.ParseFloat(strings.TrimSpace(s), 64)
+				if err != nil {
+					return nil, fmt.Errorf("invalid float in %s: %v", inputFile, err)
+				}
+				sample[i] = val
+			}
+			return sample, nil
+		}
+
+		dataset1, err := parseSample(lines[0])
+		if err != nil {
+			return nil, err
+		}
+		dataset2, err := parseSample(lines[1])
+		if err != nil {
+			return nil, err
+		}
+
+		// Read expected output (two lines: first D statistic, second p-value)
+		outData, err := os.ReadFile(outFile)
+		if err != nil {
+			return nil, err
+		}
+		outLines := strings.Split(strings.TrimSpace(string(outData)), "\n")
+		if len(outLines) < 2 {
+			return nil, fmt.Errorf("output file %s must have 2 lines", outFile)
+		}
+		dStat, err := strconv.ParseFloat(strings.TrimSpace(outLines[0]), 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid D statistic in %s: %v", outFile, err)
+		}
+		pVal, err := strconv.ParseFloat(strings.TrimSpace(outLines[1]), 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid p-value in %s: %v", outFile, err)
+		}
+
+		tests = append(tests, KSTestCase{
+			Dataset1: dataset1,
+			Dataset2: dataset2,
+			DStat:    dStat,
+			PValue:   pVal,
 		})
 	}
 
