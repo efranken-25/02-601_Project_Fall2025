@@ -868,14 +868,23 @@ func MeanStd(vals []float64) (mean float64, sd float64) {
 	return mean, sd
 }
 
-// Function RandomGraphGenerator creates a random graph using the Erdős-Rényi G(n,p) model.
-// For each possible pair of nodes (genes), an edge is included independently with probability pVal.
-// The algorithm examines all (n choose 2) = n(n-1)/2 possible edges and includes each with fixed probability p.
-// This generates an undirected, unweighted random graph following the G(n,p) distribution.
-// Inputs: geneNames (slice of gene names for node labels), pVal (edge creation probability)
-// Outputs: random GraphNetwork with randomly connected genes where each edge has weight 1.0
-func RandomGraphGenerator(geneNames []string, pVal float64) GraphNetwork {
+// Function RandomGraphGenerator generates a random graph using a fixed-m approach.
+// For each possible undirected edge (i<j), in randomized order, a biased coin
+// with success probability pVal is flipped; on success, the edge is added.
+// The process stops once targetEdges (m) edges have been added, matching the
+// edge count of the real network. If fewer than m edges are accepted in one pass,
+// remaining edges are added uniformly at random to guarantee exactly m edges.
+// Inputs: geneNames (slice of gene names for node labels), pVal (edge creation probability), targetEdges (number of edges to match from real network)
+// Outputs: random GraphNetwork with exactly targetEdges edges and weight 1.0 for each edge
+func RandomGraphGenerator(geneNames []string, pVal float64, targetEdges int) GraphNetwork {
+
 	n := len(geneNames)
+
+	//complete graph has n(n-1)/2 maximum edges
+	maxEdges := n * (n - 1) / 2
+	if targetEdges > maxEdges {
+		targetEdges = maxEdges // or panic/return error
+	}
 
 	// Initialize nodes for the random graph
 	graph := make(GraphNetwork, n)
@@ -888,24 +897,85 @@ func RandomGraphGenerator(geneNames []string, pVal float64) GraphNetwork {
 		}
 	}
 
-	// Iterate over all possible unordered pairs of nodes (i,j)
-	// For each pair, include an edge with probability pVal
+	// Build all possible undirected edges (i < j) for candidate selection
+	type pair struct{ i, j int }
+	candidates := make([]pair, 0, n*(n-1)/2)
 	for i := 0; i < n; i++ {
 		for j := i + 1; j < n; j++ {
-			if rand.Float64() < pVal { // edge created with probability pVal
-				u := graph[i]
-				v := graph[j]
-
-				// Create undirected edge: add edge in both directions with weight 1.0
-				e1 := &Edge{To: v, Weight: 1.0}
-				e2 := &Edge{To: u, Weight: 1.0}
-				//add the edge to that node's edge list
-				u.Edges = append(u.Edges, e1)
-				v.Edges = append(v.Edges, e2)
-			}
+			candidates = append(candidates, pair{i, j})
 		}
 	}
-	//return the random graph
+
+	// Shuffle candidates to avoid bias from iteration order
+	rand.Shuffle(len(candidates), func(a, b int) {
+		candidates[a], candidates[b] = candidates[b], candidates[a]
+	})
+
+	edgeCount := 0
+
+	// Flip coin for each possible edge, stop when we reach targetEdges
+	for _, pr := range candidates {
+		if edgeCount >= targetEdges {
+			break
+		}
+		if rand.Float64() < pVal { // "success" with probability pVal
+			u := graph[pr.i]
+			v := graph[pr.j]
+
+			// Create undirected edge: add edge in both directions with weight 1.0
+			e1 := &Edge{To: v, Weight: 1.0}
+			e2 := &Edge{To: u, Weight: 1.0}
+			//add the edge to that node's edge list
+			u.Edges = append(u.Edges, e1)
+			v.Edges = append(v.Edges, e2)
+
+			edgeCount++
+		}
+	}
+
+	// Guarantee exactly targetEdges edges if pVal produced too few in one pass
+	if edgeCount < targetEdges {
+		// Build adjacency check for existing edges
+		adj := make([]map[int]bool, n)
+		for i := 0; i < n; i++ {
+			adj[i] = make(map[int]bool, len(graph[i].Edges))
+			for _, e := range graph[i].Edges {
+				adj[i][e.To.ID] = true
+			}
+		}
+
+		// Find remaining candidate edges that haven't been added yet
+		remaining := make([]pair, 0)
+		for _, pr := range candidates {
+			if !adj[pr.i][pr.j] {
+				remaining = append(remaining, pr)
+			}
+		}
+
+		// Fill randomly from remaining candidates until we hit targetEdges
+		rand.Shuffle(len(remaining), func(a, b int) {
+			remaining[a], remaining[b] = remaining[b], remaining[a]
+		})
+
+		for _, pr := range remaining {
+			if edgeCount >= targetEdges {
+				break
+			}
+			u := graph[pr.i]
+			v := graph[pr.j]
+
+			// Create undirected edge: add edge in both directions with weight 1.0
+			e1 := &Edge{To: v, Weight: 1.0}
+			e2 := &Edge{To: u, Weight: 1.0}
+			//add the edge to that node's edge list
+			u.Edges = append(u.Edges, e1)
+			v.Edges = append(v.Edges, e2)
+
+			edgeCount++
+		}
+	}
+
+	//return the random graph with exactly targetEdges edges
 	return graph
 }
 

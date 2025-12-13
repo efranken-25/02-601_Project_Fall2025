@@ -574,3 +574,59 @@ func SaveEdgeCounts(nodes []*Node, topN int, filename string) error {
 	fmt.Printf("CSV saved as %s\n", filename)
 	return nil
 }
+
+// Writes ComputeDegrees output (slice of float64) into a CSV file.
+func WriteDegreesToCSV(degrees []float64, filename string) error {
+	f, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %v", err)
+	}
+	defer f.Close()
+
+	w := csv.NewWriter(f)
+	defer w.Flush()
+
+	// header row
+	if err := w.Write([]string{"node_id", "degree"}); err != nil {
+		return fmt.Errorf("failed to write header: %v", err)
+	}
+
+	// body rows
+	for i, d := range degrees {
+		record := []string{
+			strconv.Itoa(i),
+			strconv.FormatFloat(d, 'f', -1, 64),
+		}
+		if err := w.Write(record); err != nil {
+			return fmt.Errorf("failed to write row: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func SaveClusteringCoeffDistCSV(values []float64, filename string, label string) error {
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	writer := csv.NewWriter(f)
+	defer writer.Flush()
+
+	// Write header
+	if err := writer.Write([]string{"ClusteringCoefficient", "Dataset"}); err != nil {
+		return err
+	}
+
+	// Write each value
+	for _, v := range values {
+		record := []string{fmt.Sprintf("%.6f", v), label}
+		if err := writer.Write(record); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

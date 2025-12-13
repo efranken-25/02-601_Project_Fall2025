@@ -448,10 +448,10 @@ func main() {
 
 		// Generate random graphs using Erdős-Rényi G(n,p) model for both cancer types
 		fmt.Println("Generating breast cancer random graph using Erdős-Rényi G(n,p) model...")
-		breastRandomGraph := RandomGraphGenerator(breastGeneNames, 0.3)
+		breastRandomGraph := RandomGraphGenerator(breastGeneNames, 0.3, numBreastEdges)
 
 		fmt.Println("Generating ovarian cancer random graph using Erdős-Rényi G(n,p) model...")
-		ovarianRandomGraph := RandomGraphGenerator(ovarianGeneNames, 0.3)
+		ovarianRandomGraph := RandomGraphGenerator(ovarianGeneNames, 0.3, numBreastEdges)
 
 		// Compute degree distributions for random graphs
 		fmt.Println("Computing degree distributions for random graph networks...")
@@ -552,6 +552,15 @@ func main() {
 			fmt.Printf("The %s and %s networks have similar local clustering patterns.\n", dataset1Label, dataset2Label)
 		}
 
+		if errBC := SaveClusteringCoeffDistCSV(breastClusteringFiltered, "breast_clustering.csv", "Breast"); errBC != nil {
+			fmt.Println("Error:", errBC)
+		}
+		if errOC := SaveClusteringCoeffDistCSV(ovarianClusteringFiltered, "ovarian_clustering.csv", "Ovarian"); errOC != nil {
+			fmt.Println("Error:", errOC)
+		}
+
+		fmt.Println("CSV files created successfully!")
+
 		////////////////////////////////////////////////////////////////
 		////////////////////////////////////////////////////////////////
 		////////////////////////////////////////////////////////////////
@@ -589,8 +598,9 @@ func main() {
 
 		/////////////// Largest Module Heatmap ////////////
 		// grabs largest module and saves data in .csv file
-		SaveLargestModule(OvarianGraph, ovarianClusterMap, "largest_module_ovarian.csv")
+		SaveLargestModule(OvarianGraph, ovarianClusterMap, "ExtraData/largest_module_ovarian.csv")
 
+		/* file is very large so we don't print every time because it can't be saved to the github
 		///save Correlation Matrix in .csv/////////
 		errCorrMatrixO := SaveMatrixAsCSV("ExtraData/OvarianPearsonCorrelationMatrix.csv",
 			OvarianPearsonCorrelationMatrix, ovarianGeneNames, ovarianGeneNames)
@@ -600,6 +610,7 @@ func main() {
 		} else {
 			fmt.Println("Ovarian Pearson correlation matrix saved.")
 		}
+		*/
 
 		///////// Save OVARIAN module within 400-550 genes ///////////
 		inputCSVO := "ShinyApp/dataset2_nodes_communities.csv"
@@ -612,16 +623,45 @@ func main() {
 		}
 
 		///get top 200 genes///
-		errSTopNodesO := SaveTopNGenes(OvarianGraph, 100, "top_100_genes_ovarian.csv")
+		errSTopNodesO := SaveTopNGenes(OvarianGraph, 100, "ExtraData/top_100_genes_ovarian.csv")
 		if errSTopNodesO != nil {
 			log.Fatalf("Error: %v", errSTopNodesO)
 		}
 
 		// Call the subroutine to save edge counts for top 200 genes
-		errCEdgesO := SaveEdgeCounts(OvarianGraph, 100, "top100_edge_counts_ovarian.csv")
+		errCEdgesO := SaveEdgeCounts(OvarianGraph, 100, "ExtraData/top100_edge_counts_ovarian.csv")
 		if errCEdgesO != nil {
 			fmt.Println("Error:", errCEdgesO)
 		}
+
+		//compute degree distributions for original graphs
+		breastDegrees := ComputeDegrees(BreastGraph)
+
+		//save output in .csv file for degree distributions
+		if errBRD := WriteDegreesToCSV(breastRandomDegrees, "ExtraData/breastRandomdegrees.csv"); errBRD != nil {
+			log.Fatalf("error writing breast random degrees: %v", errBRD)
+		}
+
+		fmt.Println("Wrote breastRandomdegrees.csv successfully!")
+
+		if errORD := WriteDegreesToCSV(ovarianRandomDegrees, "ExtraData/ovarianRandomdegrees.csv"); errORD != nil {
+			log.Fatalf("error writing breast random degrees: %v", errORD)
+		}
+
+		fmt.Println("Wrote ovarianRandomdegrees.csv successfully!")
+
+		if errBD := WriteDegreesToCSV(breastDegrees, "ExtraData/breastdegrees.csv"); errBD != nil {
+			log.Fatalf("error writing breast random degrees: %v", errBD)
+		}
+
+		fmt.Println("Wrote breastdegrees.csv successfully!")
+
+		if errOD := WriteDegreesToCSV(ovarianDegrees, "ExtraData/ovariandegrees.csv"); errOD != nil {
+			log.Fatalf("error writing breast random degrees: %v", errOD)
+		}
+
+		fmt.Println("Wrote ovariandegrees.csv successfully!")
+
 	}
 
 	fmt.Printf("Writing %s gene network information to CSV files...\n", dataset1Label)
@@ -675,7 +715,7 @@ func main() {
 
 	/////////////// Largest Module Heatmap ////////////
 	// grabs largest module and saves data in .csv file
-	SaveLargestModule(BreastGraph, breastClusterMap, "largest_module.csv")
+	SaveLargestModule(BreastGraph, breastClusterMap, "ExtraData/largest_module.csv")
 
 	/*
 		///save Correlation Matrix in .csv/////////
@@ -702,13 +742,13 @@ func main() {
 	}
 
 	//return top 200 genes based on degree
-	errSTopNodes := SaveTopNGenes(BreastGraph, 100, "top_100_genes_breast.csv")
+	errSTopNodes := SaveTopNGenes(BreastGraph, 100, "ExtraData/top_100_genes_breast.csv")
 	if errSTopNodes != nil {
 		log.Fatalf("Error: %v", errSTopNodes)
 	}
 
 	// Call the subroutine to save edge counts for top 200 genes
-	errCEdges := SaveEdgeCounts(BreastGraph, 100, "top100_edge_counts_breast.csv")
+	errCEdges := SaveEdgeCounts(BreastGraph, 100, "ExtraData/top100_edge_counts_breast.csv")
 	if errCEdges != nil {
 		fmt.Println("Error:", errCEdges)
 	}

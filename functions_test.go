@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"math"
 	"os"
@@ -2674,8 +2675,167 @@ func ReadComputeDegreesTests(directory string) []ComputeDegreesTest {
 	return tests
 }
 
-//KS Test Testing Code
+type ECDFTest struct {
+	Sample []float64
+	X      float64
+	Result float64
+}
 
-//KSTwoSampleStatistic Testing Code
+// calculateECDF testing code
+func TestCalculateECDF(t *testing.T) {
+	tests, err := ReadECDFTests("calculateECDF")
+	if err != nil {
+		t.Fatalf("Failed to read ECDF tests: %v", err)
+	}
 
-//calculateECDF testing code
+	for i, test := range tests {
+		got := calculateECDF(test.Sample, test.X)
+		if math.Abs(got-test.Result) > 1e-6 {
+			t.Errorf("Test %d failed: got %f, want %f", i+1, got, test.Result)
+		}
+	}
+}
+
+// ParseECDFTestFile returns a slice of ECDFTest
+func ReadECDFTests(folder string) ([]ECDFTest, error) {
+	inputFiles, err := filepath.Glob(filepath.Join(folder, "input", "*.txt"))
+	if err != nil {
+		return nil, err
+	}
+
+	var tests []ECDFTest
+	for _, inputFile := range inputFiles {
+		base := filepath.Base(inputFile)
+		outFile := filepath.Join(folder, "output", base)
+
+		// Read input
+		data, err := os.ReadFile(inputFile)
+		if err != nil {
+			return nil, err
+		}
+		lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+		if len(lines) < 2 {
+			return nil, fmt.Errorf("input file %s must have 2 lines", inputFile)
+		}
+
+		// Parse sample
+		strVals := strings.Split(lines[0], ",")
+		sample := make([]float64, len(strVals))
+		for i, s := range strVals {
+			sample[i], err = strconv.ParseFloat(strings.TrimSpace(s), 64)
+			if err != nil {
+				return nil, fmt.Errorf("invalid float in %s: %v", inputFile, err)
+			}
+		}
+
+		// Parse x
+		x, err := strconv.ParseFloat(strings.TrimSpace(lines[1]), 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid x value in %s: %v", inputFile, err)
+		}
+
+		// Read expected output
+		outData, err := os.ReadFile(outFile)
+		if err != nil {
+			return nil, err
+		}
+		expVal, err := strconv.ParseFloat(strings.TrimSpace(string(outData)), 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid output in %s: %v", outFile, err)
+		}
+
+		tests = append(tests, ECDFTest{
+			Sample: sample,
+			X:      x,
+			Result: expVal,
+		})
+	}
+	return tests, nil
+}
+
+type KSTwoSampleTest struct {
+	Sample1 []float64
+	Sample2 []float64
+	Result  float64
+}
+
+func TestKSTwoSampleStatistic(t *testing.T) {
+	tests, err := ReadKSTwoSampleStatisticTest("Tests/KSTwoSampleStatistic")
+	if err != nil {
+		t.Fatalf("Failed to read KS tests: %v", err)
+	}
+
+	for i, test := range tests {
+		got := KSTwoSampleStatistic(test.Sample1, test.Sample2)
+		if math.Abs(got-test.Result) > 1e-6 {
+			t.Errorf("Test %d failed: got %f, want %f", i+1, got, test.Result)
+		}
+	}
+}
+
+func ReadKSTwoSampleStatisticTest(folder string) ([]KSTwoSampleTest, error) {
+	// Find all input files
+	inputFiles, err := filepath.Glob(filepath.Join(folder, "input", "*.txt"))
+
+	if err != nil {
+		return nil, err
+	}
+
+	var tests []KSTwoSampleTest
+	for _, inputFile := range inputFiles {
+		// Corresponding output file has the same base name
+		base := filepath.Base(inputFile)
+		outFile := filepath.Join(folder, "output", base)
+
+		// Read input file
+		data, err := os.ReadFile(inputFile)
+		if err != nil {
+			return nil, err
+		}
+		lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+		if len(lines) < 2 {
+			return nil, fmt.Errorf("input file %s must have 2 lines", inputFile)
+		}
+
+		// Parse a line into []float64
+		parseSample := func(line string) ([]float64, error) {
+			parts := strings.Split(line, ",")
+			sample := make([]float64, len(parts))
+			for i, s := range parts {
+				val, err := strconv.ParseFloat(strings.TrimSpace(s), 64)
+				if err != nil {
+					return nil, fmt.Errorf("invalid float in %s: %v", inputFile, err)
+				}
+				sample[i] = val
+			}
+			return sample, nil
+		}
+
+		sample1, err := parseSample(lines[0])
+		if err != nil {
+			return nil, err
+		}
+		sample2, err := parseSample(lines[1])
+		if err != nil {
+			return nil, err
+		}
+
+		// Read expected output
+		outData, err := filepath.Glob(filepath.Join(folder, "output", "*.txt"))
+		if err != nil {
+			return nil, err
+		}
+		expected, err := strconv.ParseFloat(strings.TrimSpace(string(outData)), 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid output in %s: %v", outFile, err)
+		}
+
+		tests = append(tests, KSTwoSampleTest{
+			Sample1: sample1,
+			Sample2: sample2,
+			Result:  expected,
+		})
+	}
+
+	return tests, nil
+}

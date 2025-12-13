@@ -13,58 +13,25 @@ if (!requireNamespace("colourpicker", quietly = TRUE)) {
 if (!requireNamespace("shinycssloaders", quietly = TRUE)) {
   install.packages("shinycssloaders")
 }
-if (!requireNamespace("here", quietly = TRUE)) {
-  install.packages("here")
-}
 
 library(shiny)
 library(visNetwork)
 library(colourpicker)
 library(shinycssloaders)
-library(here)
 
 # -------------------------------------------------------------------
 # UI
 # -------------------------------------------------------------------
 
 ui <- fluidPage(
-  tags$head(
-    tags$style(HTML("
-      /* Style the visNetwork container + add PNG watermark */
-      #network {
-        position: relative;
-        background-color: rgba(255,255,255,0.9);
-        border-radius: 10px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-
-        /* PNG watermark inside the panel */
-        background-image: url('watermark.png');
-        background-repeat: no-repeat;
-        background-position: bottom right;   /* bottom-right corner */
-        background-size: 180px auto;         /* tweak this size */
-      }
-    "))
-  ),
-  
-  # Title + subtitle + centered-under-title image
-  div(
-    style = "text-align: left; margin-left: 20px;",
-    
-    tags$h2("Gene Co-expression Network Explorer"),
-    
-    tags$h5(
-      style = "color:#666; margin-top:-5px;",
-      "Powered by Louvain Community Detection"
-    ),
-    
-    tags$img(
-      src = "watermark.png",
-      style = "
-        display: block;
-        margin-top: 10px;
-        margin-left: 90px;
-        width: 150px;
-      "
+  titlePanel(
+    div(
+      style = "text-align: left;",
+      tags$h2("Gene Coexpression Network Explorer"),
+      tags$h5(
+        style = "color:#666; margin-top:-5px;",
+        "Powered by Louvain Community Detection"
+      )
     )
   ),
   
@@ -91,16 +58,14 @@ ui <- fluidPage(
       selectInput(
         "dataset",
         label   = NULL,
-        choices = c("Dataset 1" = "dataset1", "Dataset 2" = "dataset2"),
-        selected = "dataset1"
-        choices = c("Dataset 1" = "dataset1", "Dataset 2" = "dataset2"),
-        selected = "dataset1"
+        choices = c("Breast" = "breast", "Ovarian" = "ovarian"),
+        selected = "breast"
       ),
       
       tags$hr(),
       
-      # Edge sign
-      h4("Select edges (positive or negative)"),
+      # Edge sign section
+      h4("Edge sign to include"),
       checkboxInput("edge_pos", "Positive (r > 0)", value = TRUE),
       checkboxInput("edge_neg", "Negative (r < 0)", value = TRUE),
       
@@ -122,26 +87,33 @@ ui <- fluidPage(
       checkboxInput(
         "color_nodes_comm",
         "Color nodes by Louvain community",
-        value = FALSE
-      ),
-      
-      tags$hr(),
-      
-      h4("Community Selection"),
-      tags$small(
-        style = "color:#666;",
-        "The dropdown lists communities in descending order of density (most dense → least dense)."
+        value = FALSE   # default OFF to avoid rainbow explosion
       ),
       
       selectInput(
         "community",
-        label = NULL,
-        label = NULL,
+        "Focus on one community (optional):",
         choices = "All",
         selected = "All"
       ),
       
-      checkboxInput("show_labels", "Show gene labels", TRUE)
+      sliderInput(
+        "top_hubs",
+        "Show only top N hub genes in current view (0 = show all):",
+        min = 0, max = 2000, value = 0, step = 50
+      ),
+      
+      checkboxInput("show_labels", "Show gene labels", TRUE),
+      
+      tags$hr(),
+      
+      # Edge limit
+      h4("Edge limit"),
+      sliderInput(
+        "max_edges",
+        "Maximum edges to plot:",
+        min = 1000, max = 50000, value = 20000, step = 1000
+      )
     ),
     
     mainPanel(
@@ -170,13 +142,8 @@ server <- function(input, output, session) {
     
     status("Running Go pipeline (this may take ~10–30 seconds)...")
     
-    base_dir <- here("ShinyApp")  # /Users/bethany/ProgrammingProject/ShinyApp
-    
-    # Project root (contains ProgrammingProject binary + ShinyApp/)
-    project_dir <- dirname(base_dir)  
-    
-    # Go executable in the project root
-    go_exe <- file.path(project_dir, "02-601_Project_Fall2025")
+    go_exe   <- "/Users/bethany/ProgrammingProject/ProgrammingProject"
+    base_dir <- "/Users/bethany/ProgrammingProject/ShinyApp"
     
     if (!file.exists(go_exe)) {
       status("Error: Go executable not found.")
@@ -200,10 +167,10 @@ server <- function(input, output, session) {
     message(paste(cmd_out, collapse = "\n"))
     
     # CSV paths
-    breast_nodes_path  <- file.path(base_dir, "dataset1_nodes_communities.csv")
-    breast_edges_path  <- file.path(base_dir, "dataset1_edges.csv")
-    ovarian_nodes_path <- file.path(base_dir, "dataset2_nodes_communities.csv")
-    ovarian_edges_path <- file.path(base_dir, "dataset2_edges.csv")
+    breast_nodes_path  <- file.path(base_dir, "breast_nodes_communities.csv")
+    breast_edges_path  <- file.path(base_dir, "breast_edges.csv")
+    ovarian_nodes_path <- file.path(base_dir, "ovarian_nodes_communities.csv")
+    ovarian_edges_path <- file.path(base_dir, "ovarian_edges.csv")
     
     status("Running Go pipeline: loading CSV outputs...")
     
